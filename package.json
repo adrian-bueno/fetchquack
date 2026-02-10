@@ -1,0 +1,23 @@
+{
+  "name": "fetchquack",
+  "version": "0.0.0",
+  "description": "A lightweight HTTP client with support for streaming, SSE, progress monitoring and interceptors. Works in the browser, Node.js, Bun and Deno. Includes an Angular wrapper.",
+  "license": "MIT",
+  "author": "Adrián Bueno Jiménez (devadri.com)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adrian-bueno/fetchquack"
+  },
+  "private": true,
+  "keywords": [
+    "http",
+    "fetch",
+    "sse",
+    "streaming",
+    "server-sent-events",
+    "angular",
+    "node",
+    "bun",
+    "deno"
+  ]
+}
