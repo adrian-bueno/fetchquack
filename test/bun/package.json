@@ -1,0 +1,14 @@
+{
+  "name": "bun-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "bun test tests/"
+  },
+  "dependencies": {
+    "fetchquack": "file:../../dist"
+  },
+  "devDependencies": {
+    "bun-types": "1.3.6"
+  }
+}

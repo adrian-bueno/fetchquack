@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Tests</title>
+</head>
+<body>
+  <h1>Browser ESM</h1>
+  <script type="module">
+    import * as FetchStreamSSE from '/index.js';
+    window.FetchStreamSSE = FetchStreamSSE;
+    window.testReady = true;
+  </script>
+</body>
+</html>

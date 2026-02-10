@@ -1,0 +1,15 @@
+{
+  "name": "browser-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --reporter=github",
+    "test:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "fetchquack": "file:../../dist"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2"
+  }
+}

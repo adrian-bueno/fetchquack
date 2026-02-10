@@ -1,0 +1,14 @@
+{
+  "name": "deno-tests",
+  "version": "1.0.0",
+  "tasks": {
+    "test": "deno test --allow-net --no-check tests/"
+  },
+  "imports": {
+    "fetchquack": "../../dist/server/index.js",
+    "@std/assert": "jsr:@std/assert@^1"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"]
+  }
+}
