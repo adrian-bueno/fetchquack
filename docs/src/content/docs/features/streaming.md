@@ -3,8 +3,6 @@ title: Streaming
 description: Stream large responses and process data as it arrives
 ---
 
-# Streaming
-
 FetchQuack provides first-class support for streaming responses, allowing you to process data chunk by chunk as it arrives. This is perfect for large files, real-time data, AI chat interfaces, and log streaming.
 
 ## Why Stream?

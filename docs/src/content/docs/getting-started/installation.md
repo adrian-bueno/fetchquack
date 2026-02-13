@@ -3,8 +3,6 @@ title: Installation
 description: How to install FetchQuack in your project
 ---
 
-# Installation
-
 FetchQuack is available on npm and can be installed using your preferred package manager.
 
 ## Package Managers

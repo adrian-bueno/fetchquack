@@ -3,51 +3,175 @@ title: FetchQuack
 description: A lightweight, universal HTTP client for streaming, SSE, and progress tracking
 template: splash
 hero:
-  tagline: A lightweight HTTP client built on the Fetch API with first-class support for streaming, Server-Sent Events, and progress tracking. Works everywhere - Browser, Node.js, Bun, and Deno.
+  tagline: The modern HTTP client that actually handles streaming, SSE, and progress tracking. Built on the Fetch API. Works everywhere.
   image:
     file: ../../assets/fetchquack-hero-image.webp
   actions:
     - text: Get Started
-      link: ./getting-started/introduction/
+      link: /getting-started/introduction/
       icon: right-arrow
       variant: primary
     - text: View on GitHub
       link: https://github.com/adrian-bueno/fetchquack
       icon: external
-      variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Features
+## Why FetchQuack?
 
 <CardGrid stagger>
-	<Card title="🌐 Universal">
-		Works seamlessly across Browser, Node.js, Bun, and Deno with zero configuration. One client, everywhere.
+	<Card title="🌐 Universal Runtime">
+		Write once, run everywhere. Browser, Node.js, Bun, and Deno. Zero configuration, zero platform-specific code.
 	</Card>
-	<Card title="🌊 Streaming">
-		First-class support for streaming text and binary responses. Process data as it arrives.
+	<Card title="🌊 True Streaming">
+		Not just promises—real streaming for text and binary data. AI chat responses, logs, file downloads. It just works.
 	</Card>
-	<Card title="📡 Server-Sent Events">
-		Full SSE spec support with auto-reconnect, Last-Event-ID tracking, and custom retry policies.
+	<Card title="📡 SSE Done Right">
+		Full Server-Sent Events spec with auto-reconnect, Last-Event-ID, and exponential backoff. Unlike EventSource, supports POST.
 	</Card>
-	<Card title="⏳ Progress Tracking">
-		Monitor upload and download progress on all platforms. Built-in progress event system.
+	<Card title="⏳ Progress Everywhere">
+		Upload and download progress on all platforms. No hacky workarounds. Platform-optimized under the hood.
 	</Card>
-	<Card title="🔄 Interceptors">
-		Powerful middleware system for auth, logging, retry logic, and custom request/response handling.
+	<Card title="🔄 Powerful Interceptors">
+		Auth, logging, retry, custom logic. Clean middleware API with dependency injection support (yes, even in Angular).
 	</Card>
-	<Card title="🅰️ Angular Integration">
-		RxJS Observable wrapper with injection context support for Angular 17+.
+	<Card title="🪶 Tiny & Fast">
+		~4KB gzipped. Zero runtime dependencies. TypeScript-first with complete type safety.
 	</Card>
 </CardGrid>
 
-## Quick Example
+## See It in Action
+
+<Tabs>
+<TabItem label="Basic Request">
 
 ```typescript
 import { HttpClient } from 'fetchquack';
 
 const client = new HttpClient();
 
-// TODO
+// Simple, typed requests
+const user = await client.fetch<User>({
+  method: 'GET',
+  url: '/api/users/1'
+});
+
+console.log(user.name);
 ```
+
+</TabItem>
+<TabItem label="AI Streaming">
+
+```typescript
+// Stream AI responses chunk by chunk
+let response = '';
+
+await client.fetchStream({
+  method: 'POST',
+  url: '/api/ai/chat',
+  body: { prompt: 'Explain HTTP streaming' },
+  decodeToString: true,
+  onData: (chunk) => {
+    response += chunk;
+    updateUI(response); // Real-time updates
+  }
+});
+```
+
+</TabItem>
+<TabItem label="Server-Sent Events">
+
+```typescript
+// SSE with auto-reconnect
+await client.sse({
+  method: 'GET',
+  url: '/api/events',
+  autoReconnect: true,
+  parseJson: true,
+  onEvent: (event) => {
+    console.log(event.data);
+  }
+});
+```
+
+</TabItem>
+<TabItem label="Progress Tracking">
+
+```typescript
+// Monitor upload/download progress
+await client.fetch({
+  method: 'POST',
+  url: '/api/upload',
+  body: file,
+  onUploadProgress: (p) => {
+    progressBar.style.width = `${p.percentage}%`;
+  }
+});
+```
+
+</TabItem>
+<TabItem label="Angular">
+
+```typescript
+// Angular with RxJS
+@Component({...})
+export class ChatComponent {
+  private http = inject(NgxHttpClient);
+  response = signal('');
+
+  streamChat(prompt: string) {
+    this.http.fetchStream({
+      method: 'POST',
+      url: '/api/ai/chat',
+      body: { prompt },
+      decodeToString: true
+    }).pipe(
+      takeUntilDestroyed()
+    ).subscribe(chunk => {
+      this.response.update(r => r + chunk);
+    });
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+## Built for Modern Apps
+
+<CardGrid>
+  <Card title="AI & LLMs" icon="star">
+    Perfect for streaming ChatGPT, Claude, or any AI API. Handle partial responses as they arrive.
+  </Card>
+  <Card title="Real-Time Data" icon="comment">
+    SSE for live updates, notifications, and event streams. Reliable reconnection built-in.
+  </Card>
+  <Card title="File Uploads" icon="upload">
+    Track upload progress on all platforms. Great UX for large files.
+  </Card>
+  <Card title="Angular Apps" icon="approve-check">
+    First-class RxJS integration with dependency injection support.
+  </Card>
+</CardGrid>
+
+## Install & Go
+
+```bash
+npm install fetchquack
+```
+
+That's it. No configuration. No setup. Just import and use.
+
+```typescript
+import { HttpClient } from 'fetchquack';
+
+const client = new HttpClient();
+const data = await client.fetch({ method: 'GET', url: '/api/data' });
+```
+
+<div style="text-align: center; margin-top: 3rem;">
+  <a href="./getting-started/introduction/" style="font-size: 1.2rem; font-weight: bold;">
+    Read the Docs →
+  </a>
+</div>

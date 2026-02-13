@@ -3,8 +3,6 @@ title: HTTP Client
 description: Learn about the HttpClient class and its configuration options
 ---
 
-# HTTP Client
-
 The `HttpClient` class is the core of FetchQuack. It provides methods for making HTTP requests, streaming responses, and handling Server-Sent Events.
 
 ## Creating a Client

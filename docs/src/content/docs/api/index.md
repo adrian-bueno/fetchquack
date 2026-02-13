@@ -1,9 +1,7 @@
 ---
-title: API Overview
+title: API Reference
 description: Complete API reference for FetchQuack
 ---
-
-# API Reference
 
 Complete reference documentation for all FetchQuack APIs.
 

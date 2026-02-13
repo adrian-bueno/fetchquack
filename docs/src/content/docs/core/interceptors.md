@@ -3,8 +3,6 @@ title: Interceptors
 description: Powerful middleware system for request and response handling
 ---
 
-# Interceptors
-
 Interceptors are a powerful middleware system that allows you to modify requests and responses globally or per-request. They're perfect for authentication, logging, error handling, retries, and more.
 
 ## How Interceptors Work

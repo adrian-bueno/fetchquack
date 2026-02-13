@@ -3,8 +3,6 @@ title: Requests & Responses
 description: Understanding HTTP requests and responses in FetchQuack
 ---
 
-# Requests & Responses
-
 Learn how to make different types of HTTP requests and handle their responses.
 
 ## Making Requests

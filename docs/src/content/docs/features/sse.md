@@ -1,9 +1,7 @@
 ---
-title: Server-Sent Events
+title: Server-Sent Events (SSE)
 description: Full SSE implementation with auto-reconnect and event parsing
 ---
-
-# Server-Sent Events (SSE)
 
 FetchQuack provides a complete implementation of the [SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with automatic event parsing, reconnection, and support for all HTTP methods (unlike the browser's EventSource).
 

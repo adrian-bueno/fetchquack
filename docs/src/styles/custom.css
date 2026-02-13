@@ -1,10 +1,21 @@
 /* Custom styles for FetchQuack documentation */
 
+/* Prevent horizontal scrollbar */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 :root {
   --sl-hue-accent: 200;
   --sl-color-accent-low: #3c0b64;
   --sl-color-accent: #850097;
   --sl-color-accent-high: #d365ff;
+
+  /* Gradient colors */
+  --gradient-start: #6b0f9e;
+  --gradient-mid: #9d1bb8;
+  --gradient-end: #d365ff;
 }
 
 /* Hide the site title text, keep only the logo */
@@ -12,4 +23,172 @@
   font-size: 0;
 }
 
-/* Add some custom styling if needed */
+/* Enhanced header with gradient background */
+.page.sl-theme-dark header {
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  border-bottom: 2px solid rgba(211, 101, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(107, 15, 158, 0.4);
+}
+
+.page.sl-theme-light header {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%);
+  border-bottom: 2px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.15);
+}
+
+/* Animated gradient on hover for logo area */
+header .sl-flex {
+  transition: transform 0.3s ease;
+}
+
+/* Hero section enhancements */
+.hero {
+  position: relative;
+  overflow: hidden;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding-left: calc(50vw - 50%);
+  padding-right: calc(50vw - 50%);
+  background: linear-gradient(180deg, #0f1117 0%, #1a1425 100%) !important;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  margin-top: -2rem;
+  margin-bottom: 3rem;
+}
+
+/* Force dark theme colors on hero regardless of theme */
+.hero * {
+  color: #e0e0e0 !important;
+}
+
+.hero h1 {
+  color: white !important;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(211, 101, 255, 0.15) 0%, transparent 70%);
+  animation: pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero .hero-html {
+  position: relative;
+  z-index: 1;
+}
+
+.hero img {
+  filter: drop-shadow(0 25px 50px rgba(211, 101, 255, 0.5));
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(10px, 10px) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Enhance hero tagline */
+.hero > div > p {
+  font-size: 1.3rem !important;
+  line-height: 1.6 !important;
+  font-weight: 400 !important;
+  color: #b8b8b8 !important;
+}
+
+/* Enhanced buttons */
+.sl-link-button {
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.sl-link-button.primary {
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 100%);
+  border: none;
+  box-shadow: 0 4px 15px rgba(107, 15, 158, 0.4);
+}
+
+.sl-link-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(107, 15, 158, 0.6);
+}
+
+/* Card enhancements */
+.sl-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(211, 101, 255, 0.2);
+}
+
+.sl-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(107, 15, 158, 0.3);
+  border-color: rgba(211, 101, 255, 0.5);
+}
+
+/* Code block styling */
+.expressive-code {
+  border-radius: 12px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Add a subtle animation to cards on page load */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sl-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.sl-card:nth-child(1) { animation-delay: 0.1s; }
+.sl-card:nth-child(2) { animation-delay: 0.2s; }
+.sl-card:nth-child(3) { animation-delay: 0.3s; }
+.sl-card:nth-child(4) { animation-delay: 0.4s; }
+.sl-card:nth-child(5) { animation-delay: 0.5s; }
+.sl-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Enhanced sidebar */
+.sidebar {
+  border-right: 1px solid rgba(211, 101, 255, 0.2);
+}
+
+/* Mobile menu button enhancement */
+.mobile-preferences button {
+  transition: transform 0.2s ease;
+}
+
+.mobile-preferences button:hover {
+  transform: scale(1.1);
+}
+

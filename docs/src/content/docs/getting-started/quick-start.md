@@ -3,8 +3,6 @@ title: Quick Start
 description: Get up and running with FetchQuack in minutes
 ---
 
-# Quick Start
-
 Learn the basics of FetchQuack in just a few minutes.
 
 ## Basic Usage

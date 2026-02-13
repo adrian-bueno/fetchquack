@@ -3,8 +3,6 @@ title: Angular Integration
 description: RxJS integration with dependency injection support for Angular 17+
 ---
 
-# Angular Integration
-
 FetchQuack provides seamless Angular integration with RxJS Observable support and full dependency injection context for interceptors.
 
 ## Installation

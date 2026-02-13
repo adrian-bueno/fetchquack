@@ -3,8 +3,6 @@ title: Introduction
 description: Learn about FetchQuack and what makes it special
 ---
 
-# Introduction
-
 Welcome to **FetchQuack** 🦆 — a lightweight, universal HTTP client built on the standard Fetch API.
 
 ## What is FetchQuack?

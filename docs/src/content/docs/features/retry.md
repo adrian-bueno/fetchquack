@@ -3,8 +3,6 @@ title: Retry Policies
 description: Configure automatic retry behavior for failed requests
 ---
 
-# Retry Policies
-
 FetchQuack provides flexible retry policies for handling connection failures, especially useful for Server-Sent Events auto-reconnect.
 
 ## Retry Policy Configuration
