@@ -1,0 +1,80 @@
+---
+title: Installation
+description: How to install FetchQuack in your project
+---
+
+# Installation
+
+FetchQuack is available on npm and can be installed using your preferred package manager.
+
+## Package Managers
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install fetchquack
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add fetchquack
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add fetchquack
+    ```
+  </TabItem>
+  <TabItem label="bun">
+    ```bash
+    bun add fetchquack
+    ```
+  </TabItem>
+</Tabs>
+
+## Requirements
+
+### Browser
+- Modern browsers with native `fetch` support (Chrome 42+, Firefox 39+, Safari 10.1+, Edge 14+)
+- For older browsers, you may need a fetch polyfill
+
+### Node.js
+- Node.js 18.0.0 or higher (native fetch support)
+- For older versions, consider using a fetch polyfill like `node-fetch`
+
+### Bun
+- Bun 1.0.0 or higher
+
+### Deno
+- Deno 1.0.0 or higher
+
+## Angular Integration
+
+If you're using Angular, FetchQuack includes an optional Angular wrapper with RxJS support:
+
+```bash
+npm install fetchquack
+```
+
+The Angular integration requires:
+- Angular 17.0.0 or higher
+- RxJS 7.0.0 or higher
+
+These are peer dependencies and should already be in your Angular project.
+
+## Verify Installation
+
+After installation, verify everything is working by importing the client:
+
+```typescript
+import { HttpClient } from 'fetchquack';
+
+const client = new HttpClient();
+console.log('FetchQuack is ready! 🦆');
+```
+
+## Next Steps
+
+Now that you have FetchQuack installed, check out the [Quick Start](/getting-started/quick-start) guide to learn the basics.

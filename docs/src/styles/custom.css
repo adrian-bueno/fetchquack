@@ -1,0 +1,15 @@
+/* Custom styles for FetchQuack documentation */
+
+:root {
+  --sl-hue-accent: 200;
+  --sl-color-accent-low: #3c0b64;
+  --sl-color-accent: #850097;
+  --sl-color-accent-high: #d365ff;
+}
+
+/* Hide the site title text, keep only the logo */
+.site-title {
+  font-size: 0;
+}
+
+/* Add some custom styling if needed */

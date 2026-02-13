@@ -1,0 +1,53 @@
+---
+title: FetchQuack
+description: A lightweight, universal HTTP client for streaming, SSE, and progress tracking
+template: splash
+hero:
+  tagline: A lightweight HTTP client built on the Fetch API with first-class support for streaming, Server-Sent Events, and progress tracking. Works everywhere - Browser, Node.js, Bun, and Deno.
+  image:
+    file: ../../assets/fetchquack-hero-image.webp
+  actions:
+    - text: Get Started
+      link: ./getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/adrian-bueno/fetchquack
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Features
+
+<CardGrid stagger>
+	<Card title="🌐 Universal">
+		Works seamlessly across Browser, Node.js, Bun, and Deno with zero configuration. One client, everywhere.
+	</Card>
+	<Card title="🌊 Streaming">
+		First-class support for streaming text and binary responses. Process data as it arrives.
+	</Card>
+	<Card title="📡 Server-Sent Events">
+		Full SSE spec support with auto-reconnect, Last-Event-ID tracking, and custom retry policies.
+	</Card>
+	<Card title="⏳ Progress Tracking">
+		Monitor upload and download progress on all platforms. Built-in progress event system.
+	</Card>
+	<Card title="🔄 Interceptors">
+		Powerful middleware system for auth, logging, retry logic, and custom request/response handling.
+	</Card>
+	<Card title="🅰️ Angular Integration">
+		RxJS Observable wrapper with injection context support for Angular 17+.
+	</Card>
+</CardGrid>
+
+## Quick Example
+
+```typescript
+import { HttpClient } from 'fetchquack';
+
+const client = new HttpClient();
+
+// TODO
+```
