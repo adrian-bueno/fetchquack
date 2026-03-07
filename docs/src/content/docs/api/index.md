@@ -48,10 +48,10 @@ interface HttpRequest {
   url: string;                              // Required: Request URL
   body?: any;                               // Request body
   headers?: Record<string, string>;         // HTTP headers
+  interceptors?: HttpInterceptorFn[];       // Interceptor chain to process request/response
+  signal?: AbortSignal;                     // Cancellation signal
   parseJson?: boolean;                      // Parse response as JSON (default: true)
   decodeToString?: boolean;                 // Decode to string vs Uint8Array (default: true)
-  signal?: AbortSignal;                     // Cancellation signal
-  interceptors?: HttpInterceptorFn[];       // Request-specific interceptors
   onUploadProgress?: (progress: HttpProgressEvent) => void;
   onDownloadProgress?: (progress: HttpProgressEvent) => void;
 }
@@ -62,16 +62,27 @@ interface HttpRequest {
 Streaming request configuration.
 
 ```typescript
-interface HttpStreamRequest {
+type HttpStreamRequest = HttpStreamRequestBinary | HttpStreamRequestString;
+
+interface HttpStreamRequestBase {
   method: string;
   url: string;
   body?: any;
   headers?: Record<string, string>;
-  decodeToString?: boolean;                 // default: false
+  interceptors?: HttpInterceptorFn[];
   signal?: AbortSignal;
-  onData: (chunk: string | Uint8Array) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
+}
+
+interface HttpStreamRequestBinary extends HttpStreamRequestBase {
+  decodeToString?: false;                   // Binary chunks
+  onData?: (chunk: Uint8Array) => void;
+}
+
+interface HttpStreamRequestString extends HttpStreamRequestBase {
+  decodeToString: true;                     // String chunks
+  onData?: (chunk: string) => void;
 }
 ```
 
@@ -85,11 +96,13 @@ interface HttpSseRequest<T = any> {
   url: string;
   body?: any;
   headers?: Record<string, string>;
+  interceptors?: HttpInterceptorFn[];
+  signal?: AbortSignal;
   parseJson?: boolean;                      // default: false
+  stripOptionalSpace?: boolean;             // default: true
   autoReconnect?: boolean;                  // default: false
   retryPolicy?: RetryPolicyConfig;
-  signal?: AbortSignal;
-  onEvent: (event: SseEvent<T>) => void;
+  onEvent?: (event: SseEvent<T>) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
 }

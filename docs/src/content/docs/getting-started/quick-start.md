@@ -14,12 +14,7 @@ First, create an instance of `HttpClient`:
 ```typescript
 import { HttpClient } from 'fetchquack';
 
-const client = new HttpClient({
-  baseURL: 'https://api.example.com',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const client = new HttpClient();
 ```
 
 ### Making Requests
@@ -28,23 +23,36 @@ const client = new HttpClient({
 
 ```typescript
 // Simple GET
-const response = await client.get('/users');
-console.log(response.data);
+const response = await client.fetch({
+  method: 'GET',
+  url: '/users'
+});
+console.log(response);
 
-// With query parameters
-const response = await client.get('/users', {
-  params: { page: 1, limit: 10 },
+// With query parameters (append manually or handle via URL constructor)
+const url = new URL('/users', 'https://api.example.com');
+url.searchParams.set('page', '1');
+url.searchParams.set('limit', '10');
+
+const responseWithParams = await client.fetch({
+  method: 'GET',
+  url: url.toString()
 });
 ```
 
 #### POST Request
 
 ```typescript
-const response = await client.post('/users', {
+const response = await client.fetch({
+  method: 'POST',
+  url: '/users',
   body: {
     name: 'John Doe',
     email: 'john@example.com',
   },
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 ```
 
@@ -52,13 +60,13 @@ const response = await client.post('/users', {
 
 ```typescript
 // PUT
-await client.put('/users/1', { body: { name: 'Jane Doe' } });
+await client.fetch({ method: 'PUT', url: '/users/1', body: { name: 'Jane Doe' } });
 
 // PATCH
-await client.patch('/users/1', { body: { email: 'jane@example.com' } });
+await client.fetch({ method: 'PATCH', url: '/users/1', body: { email: 'jane@example.com' } });
 
 // DELETE
-await client.delete('/users/1');
+await client.fetch({ method: 'DELETE', url: '/users/1' });
 ```
 
 ## Streaming Responses
@@ -66,10 +74,16 @@ await client.delete('/users/1');
 FetchQuack makes streaming incredibly easy:
 
 ```typescript
-await client.stream('/large-file', {
-  onChunk: (chunk) => {
+await client.fetchStream({
+  method: 'GET',
+  url: '/large-file',
+  decodeToString: true,
+  onData: (chunk) => {
     console.log('Received chunk:', chunk);
   },
+  onComplete: () => {
+    console.log('Stream finished!');
+  }
 });
 ```
 
@@ -78,7 +92,10 @@ await client.stream('/large-file', {
 Handle SSE with automatic reconnection:
 
 ```typescript
-await client.sse('/events', {
+await client.sse({
+  method: 'GET',
+  url: '/events',
+  autoReconnect: true,
   onEvent: (event) => {
     console.log('Event:', event.data);
   },
@@ -93,7 +110,9 @@ await client.sse('/events', {
 Monitor upload and download progress:
 
 ```typescript
-const response = await client.post('/upload', {
+const response = await client.fetch({
+  method: 'POST',
+  url: '/upload',
   body: largeFile,
   onUploadProgress: (progress) => {
     console.log(`Upload: ${progress.percentage}%`);
@@ -109,11 +128,13 @@ const response = await client.post('/upload', {
 FetchQuack provides detailed error information:
 
 ```typescript
+import { HttpError } from 'fetchquack';
+
 try {
-  await client.get('/api/data');
+  await client.fetch({ method: 'GET', url: '/api/data' });
 } catch (error) {
-  if (error.isHttpError) {
-    console.error(`HTTP ${error.status}: ${error.statusText}`);
+  if (error instanceof HttpError) {
+    console.error(`HTTP ${error.statusCode}: ${error.statusText}`);
     console.error('Response:', error.response);
   } else {
     console.error('Network error:', error);
@@ -123,16 +144,16 @@ try {
 
 ## Using Interceptors
 
-Add authentication or logging with interceptors:
+Add authentication or logging with interceptors globally:
 
 ```typescript
 import { HttpClient } from 'fetchquack';
-import { authInterceptor, loggingInterceptor } from 'fetchquack/interceptors';
+import { authInterceptor } from 'fetchquack/interceptors/auth';
+import { loggingInterceptor } from 'fetchquack/interceptors/logging';
 
 const client = new HttpClient({
-  baseURL: 'https://api.example.com',
-  interceptors: [
-    authInterceptor({ token: 'your-auth-token' }),
+  globalInterceptors: [
+    authInterceptor({ getToken: () => 'your-auth-token' }),
     loggingInterceptor(),
   ],
 });

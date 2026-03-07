@@ -205,11 +205,13 @@ interface HttpSseRequest<T = any> {
   url: string;                            // SSE endpoint URL
   body?: any;                             // Request body
   headers?: Record<string, string>;       // HTTP headers
+  interceptors?: HttpInterceptorFn[];     // Interceptor chain
+  signal?: AbortSignal;                   // Cancellation signal
   parseJson?: boolean;                    // Parse data as JSON (default: false)
+  stripOptionalSpace?: boolean;           // Strip optional space after colon (default: true)
   autoReconnect?: boolean;                // Auto-reconnect (default: false)
   retryPolicy?: RetryPolicyConfig;        // Reconnection policy
-  signal?: AbortSignal;                   // Cancellation signal
-  onEvent: (event: SseEvent<T>) => void;  // Event callback
+  onEvent?: (event: SseEvent<T>) => void; // Event callback
   onError?: (error: Error) => void;       // Error callback
   onComplete?: () => void;                // Completion callback
 }

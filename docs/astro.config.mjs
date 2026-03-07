@@ -8,7 +8,7 @@ export default defineConfig({
   base: "/fetchquack",
   integrations: [
     starlight({
-      title: "FetchQuack",
+      title: "fetchquack",
       description:
         "A lightweight, universal HTTP client for streaming, SSE, and progress tracking",
       favicon: "/favicon.png",
