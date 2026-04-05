@@ -11,8 +11,11 @@ import {
 } from './types';
 
 
+/**
+ * Options for the {@link fetchHttpStream} function.
+ */
 export interface FetchHttpStreamOptions {
-  /** Interceptors applied to requests made through this function */
+  /** Interceptors applied to all requests made through this function */
   globalInterceptors?: Array<HttpInterceptorFn>;
 }
 
@@ -82,9 +85,8 @@ export function fetchHttpStream(
         return;
       }
 
-      // Get a reader from the response stream
-      const reader = response.response.body.getReader();
       // Create decoder only if string output is requested (saves memory for binary)
+      const reader = response.response.body.getReader();
       const decoder = request.decodeToString ? new TextDecoder() : null;
 
       // Start recursive chunk reading

@@ -23,7 +23,7 @@ export class HttpJsonParseError extends HttpError {
    * Creates a new HttpJsonParseError.
    *
    * @param message - Error description
-   * @param responseText - Raw response text that failed to parse (truncated to 500 chars)
+    * @param responseText - Raw response text that failed to parse
    * @param error - Original JSON parse error
    */
   constructor(

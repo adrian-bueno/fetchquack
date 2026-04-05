@@ -54,7 +54,21 @@ export function getFetchWithProgressStrategy(): FetchWithProgressStrategy {
 }
 
 /**
- * Executes a fetch request with progress tracking using the appropriate runtime strategy
+ * Executes a fetch request with upload/download progress tracking.
+ *
+ * Delegates to the platform-specific strategy (XHR in browsers, ReadableStream in
+ * Node.js/Deno/Bun) after running the request through the interceptor chain.
+ *
+ * @typeParam T - Expected type of the parsed response
+ * @param context - The HTTP request context (method, url, body, headers, metadata)
+ * @param interceptors - Interceptor chain to execute before the request
+ * @param parseJson - Whether to parse the response body as JSON
+ * @param decodeToString - Whether to decode the response as text (`true`) or binary (`false`). Defaults to `true` if `undefined`.
+ * @param onUploadProgress - Callback for upload progress updates
+ * @param onDownloadProgress - Callback for download progress updates
+ * @returns Promise resolving to the parsed response data
+ * @throws {HttpError} On HTTP errors (non-2xx status)
+ * @throws {HttpJsonParseError} When JSON parsing fails and `parseJson` is `true`
  */
 export async function fetchWithProgress<T = any>(
   context: HttpInterceptorContext,
@@ -122,20 +136,10 @@ export async function fetchWithProgress<T = any>(
     console.warn(`Expected binary content but received Content-Type: ${contentType}`);
   }
 
-  // Handle response based on parseJson and decodeToString flags
   if (shouldDecodeToString) {
-    // Decode to text first
     const text = await response.response.text();
-
-    if (parseJson) {
-      // Parse JSON from decoded text with specific error handling
-      return safeJsonParse<T>(text);
-    } else {
-      // Return as string
-      return text as T;
-    }
+    return parseJson ? safeJsonParse<T>(text) : text as T;
   } else {
-    // Return binary data as Uint8Array
     const buffer = await response.response.arrayBuffer();
     return new Uint8Array(buffer) as T;
   }

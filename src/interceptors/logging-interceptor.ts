@@ -116,7 +116,6 @@ export function loggingInterceptor(options: LoggingInterceptorOptions = {}): Htt
   const normalizedSecretHeaders = secretHeaders.map(h => h.toLowerCase());
 
   return async (context: HttpInterceptorContext, next: HttpInterceptorNext) => {
-    // Skip logging if configured to do so
     if (shouldSkipLogging(context)) {
       return next(context);
     }
@@ -155,7 +154,6 @@ export function loggingInterceptor(options: LoggingInterceptorOptions = {}): Htt
       let responseBody: any = undefined;
       if (response.response && response.response.body) {
         if (sanitizeBody) {
-          // Don't log body contents when sanitizeBody is enabled
           responseBody = '<sanitized>';
         } else if (isStreaming) {
           // Don't read streaming responses to avoid consuming the stream

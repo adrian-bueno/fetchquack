@@ -11,6 +11,7 @@ export class ServerFetchWithProgress implements FetchWithProgressStrategy {
   readonly supportsUploadProgress = true;
   readonly supportsDownloadProgress = true;
 
+  /** Executes a fetch request using the Fetch API with ReadableStream for progress tracking on server runtimes. */
   async execute<T = any>(
     context: HttpInterceptorContext,
     parseJson: boolean,
@@ -122,6 +123,7 @@ export class ServerFetchWithProgress implements FetchWithProgressStrategy {
     };
   }
 
+  /** Creates a ReadableStream that wraps the request body and reports upload progress in chunks. */
   private createProgressStream(body: string, onUploadProgress: (progress: HttpProgressEvent) => void): ReadableStream {
     const encoder = new TextEncoder();
     const encoded = encoder.encode(body);
@@ -159,6 +161,7 @@ export class ServerFetchWithProgress implements FetchWithProgressStrategy {
     });
   }
 
+  /** Reads the response body via ReadableStream, reporting download progress, then parses the result. */
   private async readWithProgress<T>(
     response: Response,
     parseJson: boolean,
@@ -199,29 +202,22 @@ export class ServerFetchWithProgress implements FetchWithProgressStrategy {
     return this.parseResponseData<T>(merged, response.headers, parseJson, decodeToString);
   }
 
+  /** Reads and parses the full response body without progress tracking. */
   private async readResponseData<T>(
     response: Response,
     parseJson: boolean,
     decodeToString: boolean
   ): Promise<T> {
     if (decodeToString) {
-      // Decode to text first
       const text = await response.text();
-
-      if (parseJson) {
-        // Parse JSON from decoded text
-        return safeJsonParse<T>(text);
-      } else {
-        // Return as string
-        return text as T;
-      }
+      return parseJson ? safeJsonParse<T>(text) : text as T;
     } else {
-      // Return binary data as Uint8Array
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer) as T;
     }
   }
 
+  /** Parses a raw Uint8Array into the target type based on parseJson and decodeToString flags. */
   private parseResponseData<T>(
     data: Uint8Array,
     headers: Headers,
@@ -229,19 +225,9 @@ export class ServerFetchWithProgress implements FetchWithProgressStrategy {
     decodeToString: boolean
   ): T {
     if (decodeToString) {
-      // Decode to text first
-      const decoder = new TextDecoder();
-      const text = decoder.decode(data);
-
-      if (parseJson) {
-        // Parse JSON from decoded text
-        return safeJsonParse<T>(text);
-      } else {
-        // Return as string
-        return text as T;
-      }
+      const text = new TextDecoder().decode(data);
+      return parseJson ? safeJsonParse<T>(text) : text as T;
     } else {
-      // Return binary data as Uint8Array
       return data as T;
     }
   }

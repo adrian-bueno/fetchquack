@@ -11,6 +11,7 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
   readonly supportsUploadProgress = true;
   readonly supportsDownloadProgress = true;
 
+  /** Executes a fetch request using XMLHttpRequest for reliable progress tracking in browsers. */
   async execute<T = any>(
     context: HttpInterceptorContext,
     parseJson: boolean,
@@ -23,19 +24,16 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
 
       xhr.open(context.method, context.url, true);
 
-      // Set headers
       Object.entries(context.headers).forEach(([key, value]) => {
         xhr.setRequestHeader(key, value);
       });
 
-      // Upload progress
       if (onUploadProgress && xhr.upload) {
         xhr.upload.addEventListener('progress', (event) => {
           onUploadProgress(this.calculateProgress(event));
         });
       }
 
-      // Download progress
       if (onDownloadProgress) {
         xhr.addEventListener('progress', (event) => {
           onDownloadProgress(this.calculateProgress(event));
@@ -59,11 +57,9 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
         if (xhr.status >= 200 && xhr.status < 300) {
           let data: T;
           if (decodeToString) {
-            // Decode to text first
             const text = xhr.responseText;
 
             if (parseJson) {
-              // Parse JSON from decoded text
               try {
                 data = safeJsonParse<T>(text);
               } catch (error) {
@@ -71,11 +67,9 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
                 return;
               }
             } else {
-              // Return as string
               data = text as T;
             }
           } else {
-            // Return binary data as Uint8Array
             data = new Uint8Array(xhr.response) as T;
           }
 
@@ -102,7 +96,6 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
         reject(new HttpError(0, 'Request timeout'));
       });
 
-      // Send request
       const requestBody = context.body && typeof context.body !== 'string'
         ? JSON.stringify(context.body)
         : context.body as string | null;
@@ -111,6 +104,7 @@ export class BrowserFetchWithProgress implements FetchWithProgressStrategy {
     });
   }
 
+  /** Converts a browser ProgressEvent into an {@link HttpProgressEvent}. */
   private calculateProgress(event: globalThis.ProgressEvent): HttpProgressEvent {
     const progress: HttpProgressEvent = {
       loaded: event.loaded,

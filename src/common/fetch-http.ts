@@ -13,8 +13,11 @@ import {
 } from './types';
 
 
+/**
+ * Options for the {@link fetchHttp} function.
+ */
 export interface FetchHttpOptions {
-  /** Interceptors applied to requests made through this function */
+  /** Interceptors applied to all requests made through this function */
   globalInterceptors?: Array<HttpInterceptorFn>;
 }
 

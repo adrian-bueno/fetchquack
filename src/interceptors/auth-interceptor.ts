@@ -84,7 +84,6 @@ export function authInterceptor(options: AuthInterceptorOptions): HttpIntercepto
     // Get token - supports both sync and async providers
     const token = await options.getToken();
 
-    // Only add header if token exists
     if (token) {
       context.headers[headerName] = `${tokenPrefix}${token}`;
     }
