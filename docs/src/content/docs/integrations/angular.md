@@ -36,6 +36,8 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
+Calling `provideNgxHttpClient()` is optional. Without it, `NgxHttpClient` still works but without global interceptors. When called, it registers a configured `HttpClient` instance with Angular's DI system.
+
 ## Using NgxHttpClient
 
 Inject `NgxHttpClient` in your components or services:
@@ -68,7 +70,7 @@ export class UserListComponent {
 
 ## Promise-based Requests
 
-Use async/await for simple requests:
+Use async/await for simple requests. This is the default behavior:
 
 ```typescript
 @Component({...})
@@ -89,19 +91,18 @@ export class UserComponent {
   }
   
   async createUser(userData: CreateUserDto) {
-    const newUser = await this.http.fetch<User>({
+    return this.http.fetch<User>({
       method: 'POST',
       url: '/api/users',
       body: userData
     });
-    return newUser;
   }
 }
 ```
 
 ## Observable-based Requests
 
-Use Observables for reactive patterns:
+Add `returnObservable: true` to get an Observable instead of a Promise. The Observable automatically aborts the request when unsubscribed:
 
 ```typescript
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -115,9 +116,9 @@ export class UserComponent {
     this.http.fetch<User>({
       method: 'GET',
       url: `/api/users/${id}`,
-      returnObservable: true  // Returns Observable
+      returnObservable: true  // Returns Observable<User>
     }).pipe(
-      takeUntilDestroyed()  // Auto-cleanup
+      takeUntilDestroyed()  // Auto-cleanup and abort on destroy
     ).subscribe({
       next: (user) => this.user.set(user),
       error: (err) => console.error(err)
@@ -128,7 +129,7 @@ export class UserComponent {
 
 ## Streaming Responses
 
-Stream data with RxJS:
+`fetchStream()` always returns an `Observable`. Each emission is a chunk of data. Unsubscribing automatically aborts the stream:
 
 ```typescript
 @Component({
@@ -162,7 +163,7 @@ export class AiChatComponent {
 
 ## Server-Sent Events
 
-Handle SSE with automatic cleanup:
+`sse()` always returns an `Observable<SseEvent<T>>`. Each emission is a parsed SSE event. Unsubscribing automatically closes the connection:
 
 ```typescript
 @Component({
@@ -184,11 +185,14 @@ export class NotificationsComponent {
       parseJson: true,
       autoReconnect: true
     }).pipe(
-      takeUntilDestroyed()  // Auto-disconnect when component destroys
-    ).subscribe(event => {
-      if (event.data) {
-        this.notifications.update(list => [...list, event.data]);
-      }
+      takeUntilDestroyed()  // Auto-disconnect when component is destroyed
+    ).subscribe({
+      next: (event) => {
+        if (event.data) {
+          this.notifications.update(list => [...list, event.data!]);
+        }
+      },
+      error: (err) => console.error('SSE error:', err)
     });
   }
 }
@@ -196,7 +200,7 @@ export class NotificationsComponent {
 
 ## Interceptors with Dependency Injection
 
-The key advantage: interceptors can use Angular's `inject()`:
+The key advantage of the Angular wrapper: interceptors can use Angular's `inject()` function to access services:
 
 ```typescript
 // auth.interceptor.ts
@@ -205,7 +209,8 @@ import { HttpInterceptorFn } from 'fetchquack';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = async (context, next) => {
-  // Use inject() to get Angular services!
+  // inject() works here because provideNgxHttpClient wraps
+  // interceptors in Angular's injection context
   const authService = inject(AuthService);
   const token = await authService.getToken();
   
@@ -227,11 +232,8 @@ export const errorHandlerInterceptor: HttpInterceptorFn = async (context, next) 
   try {
     return await next(context);
   } catch (error) {
-    if (error instanceof HttpError) {
-      if (error.statusCode === 401) {
-        // Unauthorized - redirect to login
-        router.navigate(['/login']);
-      }
+    if (error instanceof HttpError && error.statusCode === 401) {
+      router.navigate(['/login']);
     }
     throw error;
   }
@@ -254,9 +256,11 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
+Both global and per-request interceptors are wrapped in Angular's injection context, so `inject()` works in both cases.
+
 ## Progress Tracking
 
-Monitor upload/download progress:
+Progress tracking works the same as the base library since `fetch()` returns a Promise:
 
 ```typescript
 @Component({
@@ -287,6 +291,7 @@ export class FileUploadComponent {
       method: 'POST',
       url: '/api/upload',
       body: file,
+      headers: { 'Content-Type': file.type },
       onUploadProgress: (progress) => {
         if (progress.percentage !== undefined) {
           this.uploadProgress.set(Math.round(progress.percentage));
@@ -301,7 +306,7 @@ export class FileUploadComponent {
 
 ## Service Pattern
 
-Create reusable services:
+Create reusable services for your API:
 
 ```typescript
 // user.service.ts
@@ -316,6 +321,13 @@ export class UserService {
     return this.http.fetch<User>({
       method: 'GET',
       url: `/api/users/${id}`
+    });
+  }
+  
+  getUsers() {
+    return this.http.fetch<User[]>({
+      method: 'GET',
+      url: '/api/users'
     });
   }
   
@@ -338,7 +350,8 @@ export class UserService {
   deleteUser(id: number) {
     return this.http.fetch<void>({
       method: 'DELETE',
-      url: `/api/users/${id}`
+      url: `/api/users/${id}`,
+      parseJson: false
     });
   }
 }
@@ -355,12 +368,13 @@ export class UserComponent {
 }
 ```
 
-## Error Handling
+## Error Handling with RxJS
 
-Handle errors with RxJS operators:
+Handle errors with RxJS operators in Observable mode:
 
 ```typescript
 import { catchError, throwError } from 'rxjs';
+import { HttpError } from 'fetchquack';
 
 @Component({...})
 export class DataComponent {
@@ -386,6 +400,24 @@ export class DataComponent {
 }
 ```
 
+Or use try/catch with Promise mode:
+
+```typescript
+async loadData() {
+  try {
+    const data = await this.http.fetch<Data>({
+      method: 'GET',
+      url: '/api/data'
+    });
+    this.processData(data);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      this.showError(error.message);
+    }
+  }
+}
+```
+
 ## Testing
 
 Mock `NgxHttpClient` in tests:
@@ -400,7 +432,7 @@ describe('UserService', () => {
   let httpMock: jasmine.SpyObj<NgxHttpClient>;
   
   beforeEach(() => {
-    const spy = jasmine.createSpyObj('NgxHttpClient', ['fetch']);
+    const spy = jasmine.createSpyObj('NgxHttpClient', ['fetch', 'fetchStream', 'sse']);
     
     TestBed.configureTestingModule({
       providers: [
@@ -413,7 +445,7 @@ describe('UserService', () => {
     httpMock = TestBed.inject(NgxHttpClient) as jasmine.SpyObj<NgxHttpClient>;
   });
   
-  it('should get user', async () => {
+  it('should get user by id', async () => {
     const mockUser = { id: 1, name: 'Test User' };
     httpMock.fetch.and.returnValue(Promise.resolve(mockUser));
     
@@ -432,29 +464,31 @@ describe('UserService', () => {
 
 ### Use takeUntilDestroyed()
 
-Always use `takeUntilDestroyed()` with Observables:
+Always use `takeUntilDestroyed()` with Observables to avoid memory leaks:
 
 ```typescript
-// Good
-this.http.fetch({...returnObservable: true})
+// Good - automatic cleanup
+this.http.sse({...})
   .pipe(takeUntilDestroyed())
   .subscribe(...);
 
-// Avoid memory leaks - manual cleanup needed
-this.http.fetch({...returnObservable: true})
+// Bad - manual cleanup needed, easy to forget
+this.http.sse({...})
   .subscribe(...);
 ```
 
 ### Prefer Promises for Simple Cases
 
+Use Promises for one-off requests, Observables for streams and reactive patterns:
+
 ```typescript
-// Good for simple requests
+// Good - simple request with async/await
 async loadData() {
   const data = await this.http.fetch<Data>({...});
   this.data.set(data);
 }
 
-// Overkill for simple case
+// Overkill for a simple one-off request
 loadData() {
   this.http.fetch<Data>({...returnObservable: true})
     .pipe(takeUntilDestroyed())
@@ -464,15 +498,17 @@ loadData() {
 
 ### Use Services for API Logic
 
+Keep API logic in services, not in components:
+
 ```typescript
-// Good - API logic in service
+// Good - API logic in a service
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(NgxHttpClient);
   getUsers() { return this.http.fetch<User[]>({...}); }
 }
 
-// Avoid - API logic in component
+// Avoid - API logic directly in component
 @Component({...})
 export class UserComponent {
   private http = inject(NgxHttpClient);

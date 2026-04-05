@@ -28,19 +28,20 @@ await client.fetch({ method: 'PATCH', url: '/api/users/1', body: { email: 'new@e
 await client.fetch({ method: 'DELETE', url: '/api/users/1' });
 
 // HEAD request
-await client.fetch({ method: 'HEAD', url: '/api/health' });
+await client.fetch({ method: 'HEAD', url: '/api/health', parseJson: false });
 
 // OPTIONS request
-await client.fetch({ method: 'OPTIONS', url: '/api/users' });
+await client.fetch({ method: 'OPTIONS', url: '/api/users', parseJson: false });
 ```
 
 ### Request Body
 
 #### JSON Body (Automatic)
 
-The most common use case - automatically serialized to JSON:
+Object bodies are automatically serialized to JSON. The `Content-Type` header is auto-set to `application/json` if not provided:
 
 ```typescript
+// Content-Type: application/json is set automatically
 await client.fetch({
   method: 'POST',
   url: '/api/users',
@@ -48,10 +49,19 @@ await client.fetch({
     name: 'John Doe',
     email: 'john@example.com',
     age: 30
-  },
-  headers: {
-    'Content-Type': 'application/json'
   }
+});
+```
+
+#### Text Body
+
+String bodies get `Content-Type: text/plain` automatically if not set:
+
+```typescript
+await client.fetch({
+  method: 'POST',
+  url: '/api/log',
+  body: 'Plain text log message'
 });
 ```
 
@@ -66,7 +76,7 @@ await client.fetch({
   method: 'POST',
   url: '/api/upload',
   body: formData
-  // Don't set Content-Type - browser will set it automatically with boundary
+  // Don't set Content-Type - browser sets it automatically with the boundary
 });
 ```
 
@@ -85,22 +95,7 @@ await client.fetch({
 });
 ```
 
-#### Text Body
-
-```typescript
-await client.fetch({
-  method: 'POST',
-  url: '/api/log',
-  body: 'Plain text log message',
-  headers: {
-    'Content-Type': 'text/plain'
-  }
-});
-```
-
 ### Request Headers
-
-#### Setting Headers
 
 ```typescript
 await client.fetch({
@@ -112,31 +107,6 @@ await client.fetch({
     'X-Custom-Header': 'value'
   }
 });
-```
-
-#### Common Header Patterns
-
-```typescript
-// JSON request
-headers: {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-}
-
-// Authentication
-headers: {
-  'Authorization': 'Bearer ' + token
-}
-
-// API Key
-headers: {
-  'X-API-Key': apiKey
-}
-
-// CORS
-headers: {
-  'Origin': 'https://example.com'
-}
 ```
 
 ## Handling Responses
@@ -162,10 +132,10 @@ console.log(user.name); // TypeScript knows about the name property
 
 ### Text Response
 
-To get raw text instead of parsing JSON:
+Get raw text instead of parsed JSON:
 
 ```typescript
-const html = await client.fetch<string>({
+const html = await client.fetch({
   method: 'GET',
   url: '/api/template',
   parseJson: false
@@ -176,10 +146,10 @@ console.log(html); // Raw HTML string
 
 ### Binary Response
 
-To get binary data as `Uint8Array`:
+Get binary data as `Uint8Array`:
 
 ```typescript
-const imageBytes = await client.fetch<Uint8Array>({
+const imageBytes = await client.fetch({
   method: 'GET',
   url: '/api/images/photo.png',
   decodeToString: false
@@ -188,28 +158,7 @@ const imageBytes = await client.fetch<Uint8Array>({
 // Create a blob and object URL
 const blob = new Blob([imageBytes], { type: 'image/png' });
 const url = URL.createObjectURL(blob);
-
-// Use in an img tag
 imageElement.src = url;
-```
-
-### Response Metadata
-
-Access response metadata through error handling:
-
-```typescript
-try {
-  const data = await client.fetch({
-    method: 'GET',
-    url: '/api/data'
-  });
-} catch (error) {
-  if (error instanceof HttpError) {
-    console.log('Status Code:', error.statusCode);
-    console.log('Status Text:', error.statusText);
-    console.log('Response:', error.response);
-  }
-}
 ```
 
 ## Request Options
@@ -222,12 +171,12 @@ interface HttpRequest {
   url: string;                              // Required: Request URL
   body?: any;                               // Optional: Request body
   headers?: Record<string, string>;         // Optional: HTTP headers
-  parseJson?: boolean;                      // Default: true
-  decodeToString?: boolean;                 // Default: true
+  parseJson?: boolean;                      // Default: true - parse response as JSON
+  decodeToString?: boolean;                 // Default: true - false returns Uint8Array
   signal?: AbortSignal;                     // Optional: Cancellation signal
   interceptors?: HttpInterceptorFn[];       // Optional: Request-specific interceptors
-  onUploadProgress?: (progress) => void;    // Optional: Upload progress callback
-  onDownloadProgress?: (progress) => void;  // Optional: Download progress callback
+  onUploadProgress?: (progress: HttpProgressEvent) => void;    // Optional
+  onDownloadProgress?: (progress: HttpProgressEvent) => void;  // Optional
 }
 ```
 
@@ -250,7 +199,7 @@ setTimeout(() => controller.abort(), 5000);
 try {
   const data = await requestPromise;
 } catch (error) {
-  if (error.name === 'AbortError') {
+  if (error instanceof HttpError && error.statusCode === 0) {
     console.log('Request was cancelled');
   }
 }
@@ -258,7 +207,7 @@ try {
 
 ### Request-Specific Interceptors
 
-Add interceptors to individual requests:
+Add interceptors to individual requests. These run after global interceptors:
 
 ```typescript
 await client.fetch({
@@ -273,7 +222,9 @@ await client.fetch({
 
 ## Error Handling
 
-### HTTP Errors
+### HttpError
+
+Thrown when a request fails (non-2xx status) or a network error occurs:
 
 ```typescript
 import { HttpError } from 'fetchquack';
@@ -282,9 +233,13 @@ try {
   await client.fetch({ method: 'GET', url: '/api/users/999' });
 } catch (error) {
   if (error instanceof HttpError) {
+    console.log('Status code:', error.statusCode);  // e.g., 404, 500
+    console.log('Message:', error.message);          // Error description
+    console.log('Original error:', error.error);     // Underlying Error, if any
+
     if (error.statusCode === 404) {
       console.log('User not found');
-    } else if (error.statusCode === 500) {
+    } else if (error.statusCode >= 500) {
       console.log('Server error');
     } else if (error.statusCode === 0) {
       console.log('Network error or request aborted');
@@ -293,7 +248,9 @@ try {
 }
 ```
 
-### JSON Parse Errors
+### HttpJsonParseError
+
+Thrown when the response body cannot be parsed as JSON (extends `HttpError`):
 
 ```typescript
 import { HttpJsonParseError } from 'fetchquack';
@@ -303,8 +260,23 @@ try {
 } catch (error) {
   if (error instanceof HttpJsonParseError) {
     console.log('Invalid JSON response');
-    console.log('Raw text:', error.responseText);
+    console.log('Raw text:', error.responseText); // Truncated to 500 chars
   }
+}
+```
+
+### Error Properties Reference
+
+```typescript
+class HttpError extends Error {
+  readonly statusCode: number;  // HTTP status code (0 for network/abort errors)
+  readonly message: string;     // Error description
+  readonly error?: Error;       // Original error (for chaining)
+}
+
+class HttpJsonParseError extends HttpError {
+  readonly responseText: string; // Raw response text (max 500 chars)
+  // statusCode is always 0
 }
 ```
 
@@ -315,10 +287,10 @@ try {
 Always specify response types:
 
 ```typescript
-// Good
+// Good - typed response
 const user = await client.fetch<User>({ method: 'GET', url: '/api/user' });
 
-// Avoid
+// Avoid - untyped response
 const user = await client.fetch({ method: 'GET', url: '/api/user' });
 ```
 
@@ -327,6 +299,8 @@ const user = await client.fetch({ method: 'GET', url: '/api/user' });
 Always handle errors appropriately:
 
 ```typescript
+import { HttpError, HttpJsonParseError } from 'fetchquack';
+
 try {
   const data = await client.fetch<DataType>({
     method: 'GET',
@@ -334,7 +308,13 @@ try {
   });
   processData(data);
 } catch (error) {
-  handleError(error);
+  if (error instanceof HttpJsonParseError) {
+    handleJsonError(error);
+  } else if (error instanceof HttpError) {
+    handleHttpError(error);
+  } else {
+    handleUnexpectedError(error);
+  }
 }
 ```
 
@@ -357,6 +337,33 @@ async function createUser(userData: CreateUserDto): Promise<User> {
     body: userData
   });
 }
+
+async function deleteUser(id: number): Promise<void> {
+  await client.fetch({
+    method: 'DELETE',
+    url: `/api/users/${id}`,
+    parseJson: false
+  });
+}
+```
+
+### Automatic Content-Type
+
+FetchQuack automatically sets `Content-Type` when not provided:
+
+- **Object body** → `application/json` (body is JSON-stringified)
+- **String body** → `text/plain`
+- **FormData** → Set automatically by the browser (with boundary)
+
+```typescript
+// These are equivalent:
+await client.fetch({ method: 'POST', url: '/api', body: { key: 'value' } });
+await client.fetch({
+  method: 'POST',
+  url: '/api',
+  body: { key: 'value' },
+  headers: { 'Content-Type': 'application/json' }
+});
 ```
 
 ## Next Steps

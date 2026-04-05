@@ -3,7 +3,16 @@ title: Server-Sent Events (SSE)
 description: Full SSE implementation with auto-reconnect and event parsing
 ---
 
-FetchQuack provides a complete implementation of the [SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with automatic event parsing, reconnection, and support for all HTTP methods (unlike the browser's EventSource).
+FetchQuack provides a complete implementation of the [SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with automatic event parsing, reconnection, and support for all HTTP methods (unlike the browser's native `EventSource` which only supports GET).
+
+## How It Works
+
+`sse()` returns `void` and delivers events through callbacks:
+- `onEvent` -- Called for each parsed SSE event
+- `onError` -- Called on connection errors
+- `onComplete` -- Called when the connection closes
+
+Use `AbortController` to close the connection.
 
 ## Basic SSE Connection
 
@@ -11,10 +20,12 @@ FetchQuack provides a complete implementation of the [SSE specification](https:/
 import { HttpClient } from 'fetchquack';
 
 const client = new HttpClient();
+const controller = new AbortController();
 
-const abort = await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
   onEvent: (event) => {
     console.log('Event type:', event.event);  // e.g., "message", "update"
     console.log('Event ID:', event.id);
@@ -28,13 +39,13 @@ const abort = await client.sse({
   }
 });
 
-// Close connection
-abort();
+// Close the connection
+// controller.abort();
 ```
 
 ## JSON Event Data
 
-Automatically parse JSON data:
+Automatically parse the `data` field as JSON:
 
 ```typescript
 interface StockPrice {
@@ -43,26 +54,34 @@ interface StockPrice {
   change: number;
 }
 
-await client.sse<StockPrice>({
+const controller = new AbortController();
+
+client.sse<StockPrice>({
   method: 'GET',
   url: '/api/stocks/stream',
+  signal: controller.signal,
   parseJson: true,  // Parse data field as JSON
   onEvent: (event) => {
-    // event.data is typed as StockPrice
-    console.log(`${event.data.symbol}: $${event.data.price}`);
-    updateStockDisplay(event.data);
+    if (event.data) {
+      // event.data is typed as StockPrice
+      console.log(`${event.data.symbol}: $${event.data.price}`);
+      updateStockDisplay(event.data);
+    }
   }
 });
 ```
 
 ## Auto-Reconnect
 
-Automatically reconnect when connection drops:
+Automatically reconnect when the connection drops:
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
     maxRetries: 10,           // Max attempts (0 = unlimited)
@@ -80,14 +99,19 @@ await client.sse({
 });
 ```
 
+All `retryPolicy` properties are optional. See [Retry Policies](/features/retry) for details.
+
 ## Custom Event Types
 
-Handle different event types:
+Handle different event types from the server:
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
   url: '/api/chat/room/123',
+  signal: controller.signal,
   parseJson: true,
   onEvent: (event) => {
     switch (event.event) {
@@ -109,10 +133,12 @@ await client.sse({
 
 ## POST Method SSE (AI Streaming)
 
-Unlike browser EventSource, supports any HTTP method:
+Unlike the browser's `EventSource`, FetchQuack supports any HTTP method. This is useful for AI APIs that require POST requests:
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'POST',
   url: '/api/ai/completions',
   body: {
@@ -121,19 +147,24 @@ await client.sse({
     stream: true
   },
   headers: {
-    'Authorization': 'Bearer sk-...',
-    'Content-Type': 'application/json'
+    'Authorization': 'Bearer sk-...'
   },
+  signal: controller.signal,
   parseJson: true,
   onEvent: (event) => {
     if (event.data?.delta) {
       process.stdout.write(event.data.delta);
     }
+  },
+  onComplete: () => {
+    console.log('\nDone');
   }
 });
 ```
 
 ## Angular Integration
+
+In Angular, `sse()` returns an `Observable<SseEvent<T>>`. Unsubscribing automatically closes the connection:
 
 ```typescript
 import { Component, inject, signal } from '@angular/core';
@@ -159,11 +190,14 @@ export class NotificationsComponent {
       parseJson: true,
       autoReconnect: true
     }).pipe(
-      takeUntilDestroyed()
-    ).subscribe(event => {
-      if (event.data) {
-        this.notifications.update(list => [...list, event.data]);
-      }
+      takeUntilDestroyed()  // Auto-close when component is destroyed
+    ).subscribe({
+      next: (event) => {
+        if (event.data) {
+          this.notifications.update(list => [...list, event.data!]);
+        }
+      },
+      error: (err) => console.error('SSE error:', err)
     });
   }
 }
@@ -175,43 +209,53 @@ SSE events have the following structure:
 
 ```typescript
 interface SseEvent<T = any> {
-  event: string;      // Event type (default: "message")
-  data: T;            // Event data (parsed if parseJson: true)
-  id?: string;        // Event ID for resuming
-  retry?: number;     // Server-suggested retry interval (ms)
+  id?: string;       // Event ID (for Last-Event-ID tracking)
+  event?: string;    // Event type (e.g., "message", "update")
+  data?: T;          // Event payload (string or parsed JSON)
+  retry?: number;    // Server-suggested reconnection interval (ms)
 }
 ```
 
+All fields are optional. The `data` field is a string by default, or parsed JSON when `parseJson: true`.
+
 ## Last-Event-ID Tracking
 
-When reconnecting, the library automatically sends the last received event ID:
+When auto-reconnect is enabled, the library automatically tracks the last received event ID and sends it as the `Last-Event-ID` header on reconnection:
 
-```typescript
-// Server sends:
-// id: 123
-// data: some data
+```
+# Server sends:
+id: 42
+event: message
+data: some data
 
-// On reconnect, client sends header:
-// Last-Event-ID: 123
+# On reconnect, client automatically sends:
+# Last-Event-ID: 42
 ```
 
 This allows the server to resume streaming from where it left off.
 
+## Server Behavior
+
+- If the server responds with `204 No Content`, the connection closes without reconnecting.
+- If the response `Content-Type` is not `text/event-stream`, the connection reports an error and does not reconnect.
+- The `Accept: text/event-stream` header is automatically added if not present.
+- If the server sends a `retry:` field, the retry interval is updated accordingly.
+
 ## Request Options
 
 ```typescript
-interface HttpSseRequest<T = any> {
-  method: string;                         // HTTP method
+interface HttpSseRequest {
+  method: string;                         // HTTP method (any method, not just GET)
   url: string;                            // SSE endpoint URL
   body?: any;                             // Request body
   headers?: Record<string, string>;       // HTTP headers
   interceptors?: HttpInterceptorFn[];     // Interceptor chain
   signal?: AbortSignal;                   // Cancellation signal
   parseJson?: boolean;                    // Parse data as JSON (default: false)
-  stripOptionalSpace?: boolean;           // Strip optional space after colon (default: true)
-  autoReconnect?: boolean;                // Auto-reconnect (default: false)
-  retryPolicy?: RetryPolicyConfig;        // Reconnection policy
-  onEvent?: (event: SseEvent<T>) => void; // Event callback
+  stripOptionalSpace?: boolean;           // Strip space after colon in fields (default: true)
+  autoReconnect?: boolean;                // Auto-reconnect on disconnect (default: false)
+  retryPolicy?: RetryPolicyConfig;        // Reconnection policy (all fields optional)
+  onEvent?: (event: SseEvent) => void;    // Event callback
   onError?: (error: Error) => void;       // Error callback
   onComplete?: () => void;                // Completion callback
 }
@@ -222,22 +266,24 @@ interface HttpSseRequest<T = any> {
 ### Handle Connection State
 
 ```typescript
+const controller = new AbortController();
 let isConnected = false;
 
-await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
   autoReconnect: true,
   onEvent: (event) => {
     if (!isConnected) {
       isConnected = true;
-      console.log('Connected');
+      showStatus('Connected');
     }
     processEvent(event);
   },
   onError: (error) => {
     isConnected = false;
-    console.log('Disconnected');
+    showStatus('Disconnected, reconnecting...');
   }
 });
 ```
@@ -245,12 +291,13 @@ await client.sse({
 ### Unlimited Retries for Critical Connections
 
 ```typescript
-await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/critical-events',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
-    maxRetries: 0,  // Unlimited retries
+    maxRetries: 0,  // 0 means unlimited retries
     initialInterval: 2000,
     maxInterval: 60000
   },
@@ -258,14 +305,15 @@ await client.sse({
 });
 ```
 
-### Clean up on Component Unmount
+### Clean Up on Component Unmount
 
 ```typescript
-// Vanilla JS
-const abort = await client.sse({...});
-window.addEventListener('beforeunload', () => abort());
+// Vanilla JS - use AbortController
+const controller = new AbortController();
+client.sse({ ..., signal: controller.signal });
+window.addEventListener('beforeunload', () => controller.abort());
 
-// Angular - automatic with takeUntilDestroyed()
+// Angular - use takeUntilDestroyed() for automatic cleanup
 this.http.sse({...})
   .pipe(takeUntilDestroyed())
   .subscribe(...);

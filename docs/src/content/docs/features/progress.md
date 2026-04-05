@@ -10,6 +10,9 @@ FetchQuack provides upload and download progress tracking that works on all plat
 Track file upload progress:
 
 ```typescript
+import { HttpClient } from 'fetchquack';
+
+const client = new HttpClient();
 const fileInput = document.getElementById('file') as HTMLInputElement;
 const file = fileInput.files[0];
 
@@ -24,7 +27,6 @@ await client.fetch({
     console.log(`Uploaded: ${progress.loaded} / ${progress.total} bytes`);
     console.log(`Progress: ${progress.percentage}%`);
     
-    // Update UI
     progressBar.style.width = `${progress.percentage}%`;
     progressText.textContent = `${progress.percentage}% uploaded`;
   }
@@ -38,7 +40,7 @@ console.log('Upload complete!');
 Track file download progress:
 
 ```typescript
-await client.fetch({
+const data = await client.fetch({
   method: 'GET',
   url: '/api/files/large-file.zip',
   decodeToString: false,
@@ -55,9 +57,9 @@ await client.fetch({
 });
 ```
 
-## Combined Progress
+## Combined Upload and Download Progress
 
-Track both upload and download:
+Track both directions for requests that upload data and receive a response:
 
 ```typescript
 await client.fetch({
@@ -79,18 +81,19 @@ await client.fetch({
 
 ```typescript
 interface HttpProgressEvent {
-  loaded: number;      // Bytes transferred
-  total?: number;      // Total bytes (if known)
-  percentage?: number; // Percentage (0-100, if total known)
+  loaded: number;      // Bytes transferred so far
+  total?: number;      // Total bytes (undefined if Content-Length not available)
+  percentage?: number; // 0-100 (undefined if total is unknown)
 }
 ```
 
 ## Angular Integration
 
+Progress tracking works the same in Angular since `fetch()` returns a Promise:
+
 ```typescript
 import { Component, inject, signal } from '@angular/core';
 import { NgxHttpClient } from 'fetchquack/ngx';
-import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-file-upload',
@@ -117,55 +120,36 @@ export class FileUploadComponent {
     }
   }
   
-  upload() {
+  async upload() {
     const file = this.selectedFile();
     if (!file) return;
     
     this.uploadProgress.set(0);
     
-    this.http.fetch({
-      method: 'POST',
-      url: '/api/upload',
-      body: file,
-      headers: { 'Content-Type': file.type },
-      onUploadProgress: (progress) => {
-        if (progress.percentage !== undefined) {
-          this.uploadProgress.set(Math.round(progress.percentage));
-        }
-      }
-    }).then(() => {
-      console.log('Upload complete!');
-      this.uploadProgress.set(100);
-    }).catch(err => {
-      console.error('Upload failed:', err);
-    });
-  }
-  
-  // Observable-based approach
-  uploadAsObservable(file: File): Observable<number> {
-    return new Observable(observer => {
-      this.http.fetch({
+    try {
+      await this.http.fetch({
         method: 'POST',
         url: '/api/upload',
         body: file,
+        headers: { 'Content-Type': file.type },
         onUploadProgress: (progress) => {
           if (progress.percentage !== undefined) {
-            observer.next(progress.percentage);
+            this.uploadProgress.set(Math.round(progress.percentage));
           }
         }
-      }).then(() => {
-        observer.complete();
-      }).catch(err => {
-        observer.error(err);
       });
-    });
+      console.log('Upload complete!');
+      this.uploadProgress.set(100);
+    } catch (err) {
+      console.error('Upload failed:', err);
+    }
   }
 }
 ```
 
 ## FormData Upload
 
-Track progress with multiple files:
+Track progress when uploading multiple files:
 
 ```typescript
 const formData = new FormData();
@@ -177,6 +161,7 @@ await client.fetch({
   method: 'POST',
   url: '/api/upload-multiple',
   body: formData,
+  // Don't set Content-Type - browser sets it with boundary
   onUploadProgress: (progress) => {
     console.log(`Uploading: ${progress.percentage}%`);
   }
@@ -188,7 +173,7 @@ await client.fetch({
 Download with progress indicator:
 
 ```typescript
-const response = await client.fetch<Uint8Array>({
+const response = await client.fetch({
   method: 'GET',
   url: '/api/files/video.mp4',
   decodeToString: false,
@@ -210,34 +195,31 @@ downloadLink.href = url;
 
 ## Platform Support
 
-Progress tracking works differently on each platform:
+Progress tracking uses platform-optimized implementations:
 
-| Platform | Upload | Download | Implementation |
-|----------|--------|----------|----------------|
-| **Browser** | ✅ Full | ✅ Full | XMLHttpRequest with progress events |
-| **Node.js** | ⚠️ Limited | ✅ Full | Stream monitoring |
-| **Bun** | ⚠️ Limited | ✅ Full | Stream monitoring |
-| **Deno** | ⚠️ Limited | ✅ Full | Stream monitoring |
+| Platform | Upload Progress | Download Progress | Implementation |
+|----------|----------------|-------------------|----------------|
+| **Browser** | Full support | Full support | XMLHttpRequest with progress events |
+| **Node.js** | Chunked streaming | Full support | ReadableStream monitoring (64KB chunks) |
+| **Bun** | Chunked streaming | Full support | ReadableStream monitoring |
+| **Deno** | Chunked streaming | Full support | ReadableStream monitoring |
 
-**Notes:**
-- Browser has the best upload progress support via XMLHttpRequest
-- All platforms support download progress through stream monitoring
-- Upload progress outside browser may require server-side implementation
+On the server (Node.js/Bun/Deno), upload progress is tracked by sending the body in 64KB chunks via a `ReadableStream`. If streaming request bodies aren't supported, a fallback emits 0% and 100% events.
 
 ## Handling Unknown Total Size
 
-When the server doesn't send `Content-Length` header:
+When the server doesn't send a `Content-Length` header, `total` and `percentage` are `undefined`:
 
 ```typescript
 await client.fetch({
   method: 'GET',
   url: '/api/stream-data',
   onDownloadProgress: (progress) => {
-    if (progress.total) {
-      // Total is known
+    if (progress.percentage !== undefined) {
+      // Total is known - show percentage
       progressBar.style.width = `${progress.percentage}%`;
     } else {
-      // Total is unknown - show indeterminate progress
+      // Total is unknown - show bytes downloaded
       const kb = (progress.loaded / 1024).toFixed(0);
       progressText.textContent = `Downloaded: ${kb} KB`;
       progressBar.classList.add('indeterminate');
@@ -250,7 +232,7 @@ await client.fetch({
 
 ### Throttle Progress Updates
 
-Avoid updating UI too frequently:
+Avoid updating the UI too frequently:
 
 ```typescript
 let lastUpdate = 0;
@@ -272,7 +254,6 @@ await client.fetch({
 ### Show Speed and Time Remaining
 
 ```typescript
-let startTime = Date.now();
 let lastLoaded = 0;
 let lastTime = Date.now();
 
@@ -284,28 +265,31 @@ await client.fetch({
     const timeDiff = (now - lastTime) / 1000; // seconds
     const bytesDiff = progress.loaded - lastLoaded;
     
-    // Calculate speed (bytes per second)
-    const speed = bytesDiff / timeDiff;
-    const speedMB = (speed / (1024 * 1024)).toFixed(2);
-    
-    // Calculate time remaining
-    if (progress.total && speed > 0) {
-      const remaining = (progress.total - progress.loaded) / speed;
-      const minutes = Math.floor(remaining / 60);
-      const seconds = Math.floor(remaining % 60);
+    if (timeDiff > 0) {
+      const speed = bytesDiff / timeDiff;
+      const speedMB = (speed / (1024 * 1024)).toFixed(2);
       
-      console.log(`Speed: ${speedMB} MB/s, Time remaining: ${minutes}m ${seconds}s`);
+      if (progress.total && speed > 0) {
+        const remaining = (progress.total - progress.loaded) / speed;
+        const minutes = Math.floor(remaining / 60);
+        const seconds = Math.floor(remaining % 60);
+        console.log(`Speed: ${speedMB} MB/s, ETA: ${minutes}m ${seconds}s`);
+      }
+      
+      lastLoaded = progress.loaded;
+      lastTime = now;
     }
-    
-    lastLoaded = progress.loaded;
-    lastTime = now;
   }
 });
 ```
 
 ### Handle Errors
 
+Always handle errors alongside progress tracking:
+
 ```typescript
+import { HttpError } from 'fetchquack';
+
 try {
   await client.fetch({
     method: 'POST',
@@ -317,7 +301,9 @@ try {
   });
   showSuccess('Upload complete!');
 } catch (error) {
-  showError('Upload failed: ' + error.message);
+  if (error instanceof HttpError) {
+    showError(`Upload failed: ${error.message}`);
+  }
   resetProgress();
 }
 ```

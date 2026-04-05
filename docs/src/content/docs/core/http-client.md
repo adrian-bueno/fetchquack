@@ -19,7 +19,8 @@ const client = new HttpClient();
 
 ```typescript
 import { HttpClient } from 'fetchquack';
-import { authInterceptor, loggingInterceptor } from 'fetchquack/interceptors';
+import { authInterceptor } from 'fetchquack/interceptors/auth';
+import { loggingInterceptor } from 'fetchquack/interceptors/logging';
 
 const client = new HttpClient({
   globalInterceptors: [
@@ -35,9 +36,9 @@ The `HttpClient` constructor accepts an optional configuration object:
 
 ### HttpClientOptions
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `globalInterceptors` | `HttpInterceptorFn[]` | Array of interceptors applied to all requests made with this client |
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `globalInterceptors` | `HttpInterceptorFn[]` | `[]` | Array of interceptors applied to all requests made with this client |
 
 ## Methods
 
@@ -48,9 +49,24 @@ The `HttpClient` provides three main methods:
 Makes a standard HTTP request and returns a Promise with the response data.
 
 ```typescript
+// JSON response (default)
 const data = await client.fetch<User>({
   method: 'GET',
   url: '/api/users/1'
+});
+
+// Text response
+const html = await client.fetch({
+  method: 'GET',
+  url: '/page.html',
+  parseJson: false
+});
+
+// Binary response
+const bytes = await client.fetch({
+  method: 'GET',
+  url: '/image.png',
+  decodeToString: false
 });
 ```
 
@@ -58,30 +74,46 @@ const data = await client.fetch<User>({
 
 ### fetchStream()
 
-Streams response data chunk by chunk, perfect for large files or real-time data.
+Streams response data chunk by chunk through callbacks. Returns `void` (not a Promise). Use `AbortController` to cancel the stream.
 
 ```typescript
-await client.fetchStream({
+const controller = new AbortController();
+
+client.fetchStream({
   method: 'GET',
   url: '/api/large-file',
-  onData: (chunk) => console.log('Received chunk:', chunk),
+  signal: controller.signal,
+  decodeToString: true,
+  onData: (chunk) => console.log('Received:', chunk),
+  onError: (error) => console.error('Error:', error),
   onComplete: () => console.log('Stream complete')
 });
+
+// Cancel the stream
+// controller.abort();
 ```
 
 [Learn more about streaming](/features/streaming)
 
 ### sse()
 
-Connects to a Server-Sent Events endpoint with automatic event parsing and reconnection support.
+Connects to a Server-Sent Events endpoint with automatic event parsing and reconnection support. Returns `void` (not a Promise). Use `AbortController` to close the connection.
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
+  autoReconnect: true,
   onEvent: (event) => console.log('Event:', event.data),
-  autoReconnect: true
+  onError: (error) => console.error('Error:', error),
+  onComplete: () => console.log('Connection closed')
 });
+
+// Close the connection
+// controller.abort();
 ```
 
 [Learn more about Server-Sent Events](/features/sse)
@@ -91,6 +123,10 @@ await client.sse({
 You can create multiple client instances with different configurations:
 
 ```typescript
+import { authInterceptor } from 'fetchquack/interceptors/auth';
+import { loggingInterceptor } from 'fetchquack/interceptors/logging';
+import { headerInterceptor } from 'fetchquack/interceptors/header';
+
 // Public API client
 const publicClient = new HttpClient();
 
@@ -139,7 +175,7 @@ The `HttpClient` works seamlessly across all platforms:
 - **Bun** - Full support with Bun's optimized runtime
 - **Deno** - Works with Deno's secure runtime
 
-No platform-specific code needed—one client works everywhere!
+No platform-specific code needed -- one client works everywhere.
 
 ## Next Steps
 

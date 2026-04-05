@@ -22,19 +22,19 @@ const client = new HttpClient();
 #### GET Request
 
 ```typescript
-// Simple GET
-const response = await client.fetch({
+// Simple GET - response is automatically parsed as JSON
+const users = await client.fetch<User[]>({
   method: 'GET',
-  url: '/users'
+  url: '/api/users'
 });
-console.log(response);
+console.log(users);
 
-// With query parameters (append manually or handle via URL constructor)
+// With query parameters
 const url = new URL('/users', 'https://api.example.com');
 url.searchParams.set('page', '1');
 url.searchParams.set('limit', '10');
 
-const responseWithParams = await client.fetch({
+const pagedUsers = await client.fetch<User[]>({
   method: 'GET',
   url: url.toString()
 });
@@ -43,15 +43,14 @@ const responseWithParams = await client.fetch({
 #### POST Request
 
 ```typescript
-const response = await client.fetch({
+// Object bodies are automatically serialized to JSON
+// Content-Type is auto-set to 'application/json' for object bodies
+const newUser = await client.fetch<User>({
   method: 'POST',
-  url: '/users',
+  url: '/api/users',
   body: {
     name: 'John Doe',
     email: 'john@example.com',
-  },
-  headers: {
-    'Content-Type': 'application/json'
   }
 });
 ```
@@ -60,41 +59,74 @@ const response = await client.fetch({
 
 ```typescript
 // PUT
-await client.fetch({ method: 'PUT', url: '/users/1', body: { name: 'Jane Doe' } });
+await client.fetch({ method: 'PUT', url: '/api/users/1', body: { name: 'Jane Doe' } });
 
 // PATCH
-await client.fetch({ method: 'PATCH', url: '/users/1', body: { email: 'jane@example.com' } });
+await client.fetch({ method: 'PATCH', url: '/api/users/1', body: { email: 'jane@example.com' } });
 
 // DELETE
-await client.fetch({ method: 'DELETE', url: '/users/1' });
+await client.fetch({ method: 'DELETE', url: '/api/users/1' });
+```
+
+#### Text Response
+
+```typescript
+const html = await client.fetch({
+  method: 'GET',
+  url: '/api/page',
+  parseJson: false
+});
+```
+
+#### Binary Response
+
+```typescript
+const imageData = await client.fetch({
+  method: 'GET',
+  url: '/api/image.png',
+  decodeToString: false
+});
+// imageData is a Uint8Array
 ```
 
 ## Streaming Responses
 
-FetchQuack makes streaming incredibly easy:
+Stream response data chunk by chunk. `fetchStream()` returns `void` and delivers data through callbacks. Use `AbortController` to cancel:
 
 ```typescript
-await client.fetchStream({
+const controller = new AbortController();
+
+client.fetchStream({
   method: 'GET',
-  url: '/large-file',
+  url: '/api/large-file',
+  signal: controller.signal,
   decodeToString: true,
   onData: (chunk) => {
     console.log('Received chunk:', chunk);
   },
   onComplete: () => {
     console.log('Stream finished!');
+  },
+  onError: (error) => {
+    console.error('Stream error:', error);
   }
 });
+
+// Cancel at any time
+// controller.abort();
 ```
 
 ## Server-Sent Events
 
-Handle SSE with automatic reconnection:
+Handle SSE with automatic reconnection. `sse()` also returns `void` and uses callbacks:
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
-  url: '/events',
+  url: '/api/events',
+  signal: controller.signal,
   autoReconnect: true,
   onEvent: (event) => {
     console.log('Event:', event.data);
@@ -102,7 +134,13 @@ await client.sse({
   onError: (error) => {
     console.error('Error:', error);
   },
+  onComplete: () => {
+    console.log('Connection closed');
+  }
 });
+
+// Close the connection
+// controller.abort();
 ```
 
 ## Progress Tracking
@@ -112,7 +150,7 @@ Monitor upload and download progress:
 ```typescript
 const response = await client.fetch({
   method: 'POST',
-  url: '/upload',
+  url: '/api/upload',
   body: largeFile,
   onUploadProgress: (progress) => {
     console.log(`Upload: ${progress.percentage}%`);
@@ -128,16 +166,43 @@ const response = await client.fetch({
 FetchQuack provides detailed error information:
 
 ```typescript
-import { HttpError } from 'fetchquack';
+import { HttpError, HttpJsonParseError } from 'fetchquack';
 
 try {
   await client.fetch({ method: 'GET', url: '/api/data' });
 } catch (error) {
-  if (error instanceof HttpError) {
-    console.error(`HTTP ${error.statusCode}: ${error.statusText}`);
-    console.error('Response:', error.response);
-  } else {
-    console.error('Network error:', error);
+  if (error instanceof HttpJsonParseError) {
+    // JSON parsing failed
+    console.error('Invalid JSON:', error.responseText);
+  } else if (error instanceof HttpError) {
+    // HTTP error (4xx, 5xx) or network error
+    console.error(`HTTP ${error.statusCode}: ${error.message}`);
+    // statusCode is 0 for network errors or aborted requests
+  }
+}
+```
+
+## Request Cancellation
+
+Use `AbortController` to cancel any request:
+
+```typescript
+const controller = new AbortController();
+
+const promise = client.fetch({
+  method: 'GET',
+  url: '/api/slow-endpoint',
+  signal: controller.signal
+});
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const data = await promise;
+} catch (error) {
+  if (error instanceof HttpError && error.statusCode === 0) {
+    console.log('Request was cancelled');
   }
 }
 ```

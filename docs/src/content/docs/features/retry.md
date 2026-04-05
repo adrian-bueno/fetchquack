@@ -1,45 +1,48 @@
 ---
 title: Retry Policies
-description: Configure automatic retry behavior for failed requests
+description: Configure automatic retry behavior for SSE connections
 ---
 
-FetchQuack provides flexible retry policies for handling connection failures, especially useful for Server-Sent Events auto-reconnect.
+FetchQuack provides configurable retry policies with exponential backoff for SSE auto-reconnect. You can also implement custom retry logic for regular requests using interceptors.
 
 ## Retry Policy Configuration
 
+All properties are optional. Provide only what you want to override:
+
 ```typescript
 interface RetryPolicyConfig {
-  maxRetries: number;         // Maximum retry attempts (0 = unlimited)
-  initialInterval: number;    // Initial delay in milliseconds
-  maxInterval: number;        // Maximum delay cap in milliseconds
-  backoffMultiplier: number;  // Exponential backoff multiplier
-  jitter: number;             // Random jitter range in milliseconds
+  maxRetries?: number;         // Max retry attempts (0 = unlimited). Default: 0
+  initialInterval?: number;    // Initial delay in ms. Default: 3000
+  maxInterval?: number;        // Maximum delay cap in ms. Default: 30000
+  backoffMultiplier?: number;  // Exponential backoff multiplier. Default: 2
+  jitter?: number;             // Random jitter range in ms. Default: 1000
 }
 ```
 
-## Default Retry Policy
+## Default Values
 
-The default retry policy for SSE:
+The default retry policy:
 
-```typescript
-{
-  maxRetries: 0,              // Unlimited retries
-  initialInterval: 3000,      // Start with 3 seconds
-  maxInterval: 30000,         // Cap at 30 seconds
-  backoffMultiplier: 2,       // Double each time
-  jitter: 1000                // Add 0-1 second randomness
-}
-```
+| Property | Default | Description |
+|----------|---------|-------------|
+| `maxRetries` | `0` | Unlimited retries |
+| `initialInterval` | `3000` | 3 second initial delay |
+| `maxInterval` | `30000` | 30 second maximum delay |
+| `backoffMultiplier` | `2` | Double the delay each retry |
+| `jitter` | `1000` | 0-1 second random jitter |
 
 ## SSE with Retry Policy
 
 ```typescript
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
-    maxRetries: 10,           // Try 10 times
+    maxRetries: 10,           // Try 10 times then give up
     initialInterval: 1000,    // Start with 1 second
     maxInterval: 30000,       // Max 30 seconds
     backoffMultiplier: 2,     // Double delay each retry
@@ -54,17 +57,38 @@ await client.sse({
 });
 ```
 
+You can override just the properties you care about:
+
+```typescript
+client.sse({
+  method: 'GET',
+  url: '/api/events',
+  signal: controller.signal,
+  autoReconnect: true,
+  retryPolicy: {
+    maxRetries: 5  // Only override maxRetries, keep all other defaults
+  },
+  onEvent: (event) => processEvent(event)
+});
+```
+
 ## Exponential Backoff
 
-How retry delays are calculated:
+Retry delays are calculated using this formula:
 
 ```
-Attempt 1: 1000ms + random(0-1000)ms = ~1000-2000ms
-Attempt 2: 2000ms + random(0-1000)ms = ~2000-3000ms
-Attempt 3: 4000ms + random(0-1000)ms = ~4000-5000ms
-Attempt 4: 8000ms + random(0-1000)ms = ~8000-9000ms
-Attempt 5: 16000ms + random(0-1000)ms = ~16000-17000ms
-Attempt 6: 30000ms (capped) + random(0-1000)ms = ~30000-31000ms
+delay = min(initialInterval * backoffMultiplier^retryCount, maxInterval) + random(0, jitter)
+```
+
+Example with `initialInterval: 1000, backoffMultiplier: 2, maxInterval: 30000, jitter: 1000`:
+
+```
+Attempt 1: min(1000 * 2^0, 30000) + random(0-1000) = ~1000-2000ms
+Attempt 2: min(1000 * 2^1, 30000) + random(0-1000) = ~2000-3000ms
+Attempt 3: min(1000 * 2^2, 30000) + random(0-1000) = ~4000-5000ms
+Attempt 4: min(1000 * 2^3, 30000) + random(0-1000) = ~8000-9000ms
+Attempt 5: min(1000 * 2^4, 30000) + random(0-1000) = ~16000-17000ms
+Attempt 6: min(1000 * 2^5, 30000) + random(0-1000) = ~30000-31000ms (capped)
 ```
 
 ## Unlimited Retries
@@ -72,12 +96,13 @@ Attempt 6: 30000ms (capped) + random(0-1000)ms = ~30000-31000ms
 For critical connections that should never give up:
 
 ```typescript
-await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/critical-events',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
-    maxRetries: 0,            // Never stop trying
+    maxRetries: 0,            // 0 means never stop trying
     initialInterval: 2000,
     maxInterval: 60000,       // Max 1 minute between retries
     backoffMultiplier: 1.5,
@@ -93,35 +118,61 @@ await client.sse({
 For low-latency environments:
 
 ```typescript
-retryPolicy: {
-  maxRetries: 5,
-  initialInterval: 500,       // Start fast
-  maxInterval: 5000,          // Cap at 5 seconds
-  backoffMultiplier: 1.5,     // Slower growth
-  jitter: 200
-}
+client.sse({
+  method: 'GET',
+  url: '/api/fast-events',
+  signal: controller.signal,
+  autoReconnect: true,
+  retryPolicy: {
+    maxRetries: 5,
+    initialInterval: 500,       // Start fast
+    maxInterval: 5000,          // Cap at 5 seconds
+    backoffMultiplier: 1.5,     // Slower growth
+    jitter: 200
+  },
+  onEvent: (event) => processEvent(event)
+});
+```
+
+## Constant Interval (No Backoff)
+
+Set `backoffMultiplier` to `1` for a fixed retry interval:
+
+```typescript
+client.sse({
+  method: 'GET',
+  url: '/api/events',
+  signal: controller.signal,
+  autoReconnect: true,
+  retryPolicy: {
+    initialInterval: 5000,
+    backoffMultiplier: 1,     // No exponential growth
+    jitter: 500
+  },
+  onEvent: (event) => processEvent(event)
+});
 ```
 
 ## Server-Suggested Retry Interval
 
-SSE servers can suggest retry intervals:
+SSE servers can suggest retry intervals via the `retry:` field:
 
 ```
-Server sends:
 retry: 5000
+event: message
 data: some data
 ```
 
-FetchQuack respects the server's suggestion but still applies the retry policy bounds (initialInterval and maxInterval).
+FetchQuack respects the server's suggestion. The suggested interval replaces the current interval but is still capped by `maxInterval`.
 
-## Custom Retry Logic
+## Custom Retry Logic for Regular Requests
 
-For more control, implement a custom interceptor:
+For retrying regular `fetch()` requests, use a custom interceptor:
 
 ```typescript
 import { HttpInterceptorFn, HttpError } from 'fetchquack';
 
-const customRetryInterceptor: HttpInterceptorFn = async (context, next) => {
+const retryInterceptor: HttpInterceptorFn = async (context, next) => {
   const maxRetries = 3;
   let attempt = 0;
   
@@ -152,43 +203,21 @@ const customRetryInterceptor: HttpInterceptorFn = async (context, next) => {
 };
 
 const client = new HttpClient({
-  globalInterceptors: [customRetryInterceptor]
+  globalInterceptors: [retryInterceptor]
 });
-```
-
-## Conditional Retry
-
-Only retry certain types of errors:
-
-```typescript
-retryPolicy: {
-  maxRetries: 5,
-  initialInterval: 1000,
-  maxInterval: 10000,
-  backoffMultiplier: 2,
-  jitter: 500,
-  // Custom: only retry on network errors, not HTTP errors
-  shouldRetry: (error) => {
-    if (error instanceof HttpError) {
-      // Don't retry on HTTP errors
-      return false;
-    }
-    // Retry on network errors
-    return true;
-  }
-}
 ```
 
 ## Monitoring Retries
 
-Track retry attempts:
+Track retry attempts in the `onError` callback:
 
 ```typescript
 let retryCount = 0;
 
-await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/events',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
     maxRetries: 10,
@@ -208,7 +237,6 @@ await client.sse({
     retryCount++;
     console.log(`Retry attempt ${retryCount}`);
     
-    // Alert user after multiple failures
     if (retryCount >= 5) {
       showConnectionWarning('Connection unstable, retrying...');
     }
@@ -218,24 +246,18 @@ await client.sse({
 
 ## Best Practices
 
-### Use Jitter
+### Always Use Jitter
 
-Always add jitter to prevent thundering herd:
+Jitter prevents the "thundering herd" problem where all clients retry at the same time:
 
 ```typescript
 // Good - with jitter
 retryPolicy: {
-  maxRetries: 5,
-  initialInterval: 1000,
-  backoffMultiplier: 2,
-  jitter: 500  // Prevents all clients retrying at exact same time
+  jitter: 500  // Spreads out retry attempts
 }
 
 // Avoid - no jitter
 retryPolicy: {
-  maxRetries: 5,
-  initialInterval: 1000,
-  backoffMultiplier: 2,
   jitter: 0    // All clients retry simultaneously
 }
 ```
@@ -247,42 +269,47 @@ Prevent excessively long waits:
 ```typescript
 retryPolicy: {
   maxRetries: 0,              // Unlimited
-  initialInterval: 1000,
   maxInterval: 60000,         // Don't wait more than 1 minute
-  backoffMultiplier: 2,
-  jitter: 1000
 }
 ```
 
 ### Finite Retries for User-Initiated Actions
 
+Don't make users wait forever:
+
 ```typescript
-// User clicked a button
-await client.fetch({
-  method: 'POST',
-  url: '/api/action',
-  interceptors: [
-    createRetryInterceptor({
-      maxRetries: 3,          // Give up after 3 tries
-      initialInterval: 1000
-    })
-  ]
+// User clicked a button - use a retry interceptor with finite attempts
+const client = new HttpClient({
+  globalInterceptors: [retryInterceptor]  // max 3 retries
 });
+
+try {
+  await client.fetch({
+    method: 'POST',
+    url: '/api/action',
+    body: actionData
+  });
+} catch (error) {
+  showError('Action failed after multiple attempts');
+}
 ```
 
-### Unlimited for Background Connections
+### Unlimited Retries for Background Connections
+
+Background SSE connections should keep reconnecting:
 
 ```typescript
-// Background SSE connection
-await client.sse({
+client.sse({
   method: 'GET',
   url: '/api/live-updates',
+  signal: controller.signal,
   autoReconnect: true,
   retryPolicy: {
     maxRetries: 0,            // Keep trying forever
     initialInterval: 2000,
     maxInterval: 60000
-  }
+  },
+  onEvent: (event) => updateDashboard(event)
 });
 ```
 
@@ -290,4 +317,4 @@ await client.sse({
 
 - Learn about [Server-Sent Events](/features/sse) that use retry policies
 - Explore [Interceptors](/core/interceptors) for custom retry logic
-- Check out the [Error Handling](/core/requests-responses#error-handling) guide
+- Check out [Error Handling](/core/requests-responses#error-handling) guide

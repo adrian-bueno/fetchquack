@@ -50,10 +50,14 @@ FetchQuack is available on npm and can be installed using your preferred package
 
 ## Angular Integration
 
-If you're using Angular, FetchQuack includes an optional Angular wrapper with RxJS support:
+If you're using Angular, FetchQuack includes an Angular wrapper with RxJS support under the subpackage `fetchquack/ngx`.
 
 ```bash
 npm install fetchquack
+```
+
+```ts
+import { NgxHttpClient } from 'fetchquack/ngx';
 ```
 
 The Angular integration requires:

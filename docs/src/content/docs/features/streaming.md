@@ -3,16 +3,25 @@ title: Streaming
 description: Stream large responses and process data as it arrives
 ---
 
-FetchQuack provides first-class support for streaming responses, allowing you to process data chunk by chunk as it arrives. This is perfect for large files, real-time data, AI chat interfaces, and log streaming.
+FetchQuack provides first-class support for streaming responses, allowing you to process data chunk by chunk as it arrives. This is ideal for large files, real-time data, AI chat interfaces, and log streaming.
 
 ## Why Stream?
 
 Streaming is beneficial when:
 
-- **Large responses** - Process data without loading everything into memory
-- **Real-time data** - Display results as they arrive (AI chat, live logs)
-- **Better UX** - Show progress and partial results immediately
-- **Memory efficiency** - Handle files larger than available RAM
+- **Large responses** -- Process data without loading everything into memory
+- **Real-time data** -- Display results as they arrive (AI chat, live logs)
+- **Better UX** -- Show progress and partial results immediately
+- **Memory efficiency** -- Handle files larger than available RAM
+
+## How It Works
+
+`fetchStream()` returns `void` and delivers data through callbacks:
+- `onData` -- Called for each chunk of data
+- `onError` -- Called if an error occurs
+- `onComplete` -- Called when the stream ends
+
+Use `AbortController` to cancel the stream at any time.
 
 ## Basic Text Streaming
 
@@ -22,14 +31,15 @@ Stream text responses chunk by chunk:
 import { HttpClient } from 'fetchquack';
 
 const client = new HttpClient();
+const controller = new AbortController();
 
-const abort = await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/stream',
-  decodeToString: true,  // Decode chunks as text
+  signal: controller.signal,
+  decodeToString: true,  // Decode chunks as text (string)
   onData: (chunk) => {
     console.log('Received:', chunk);
-    // Display chunk in UI
   },
   onComplete: () => {
     console.log('Stream complete');
@@ -39,8 +49,8 @@ const abort = await client.fetchStream({
   }
 });
 
-// Cancel streaming at any time
-abort();
+// Cancel the stream at any time
+// controller.abort();
 ```
 
 ## Binary Streaming
@@ -48,18 +58,19 @@ abort();
 Stream binary data (images, videos, files):
 
 ```typescript
+const controller = new AbortController();
 const chunks: Uint8Array[] = [];
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/files/video.mp4',
-  decodeToString: false,  // Keep as binary
+  signal: controller.signal,
+  // decodeToString defaults to false, so chunks are Uint8Array
   onData: (chunk) => {
     chunks.push(chunk);
     console.log(`Downloaded ${chunk.length} bytes`);
   },
   onComplete: () => {
-    // Combine all chunks into a blob
     const blob = new Blob(chunks, { type: 'video/mp4' });
     const url = URL.createObjectURL(blob);
     videoElement.src = url;
@@ -69,15 +80,16 @@ await client.fetchStream({
 
 ## AI Chat Streaming
 
-Perfect for streaming AI responses:
+Stream AI responses in real-time.
 
 ### Vanilla JavaScript
 
 ```typescript
 const responseDiv = document.getElementById('response');
+const controller = new AbortController();
 let fullResponse = '';
 
-const abort = await client.fetchStream({
+client.fetchStream({
   method: 'POST',
   url: '/api/ai/chat',
   body: {
@@ -86,9 +98,7 @@ const abort = await client.fetchStream({
     ],
     stream: true
   },
-  headers: {
-    'Content-Type': 'application/json'
-  },
+  signal: controller.signal,
   decodeToString: true,
   onData: (chunk) => {
     fullResponse += chunk;
@@ -103,8 +113,8 @@ const abort = await client.fetchStream({
   }
 });
 
-// Add stop button
-stopButton.onclick = () => abort();
+// Stop button
+stopButton.onclick = () => controller.abort();
 ```
 
 ### Angular
@@ -121,6 +131,7 @@ import { Subscription } from 'rxjs';
       <div class="user-message">{{ userMessage }}</div>
       <div class="ai-response">{{ aiResponse() }}</div>
     </div>
+    <button (click)="sendMessage()">Send</button>
     <button (click)="stopStreaming()" *ngIf="streaming()">Stop</button>
   `
 })
@@ -136,6 +147,8 @@ export class AiChatComponent {
     this.aiResponse.set('');
     this.streaming.set(true);
     
+    // fetchStream returns an Observable in Angular
+    // Unsubscribing automatically aborts the stream
     this.subscription = this.http.fetchStream({
       method: 'POST',
       url: '/api/ai/chat',
@@ -153,14 +166,13 @@ export class AiChatComponent {
         this.streaming.set(false);
       },
       complete: () => {
-        console.log('Stream complete');
         this.streaming.set(false);
       }
     });
   }
   
   stopStreaming() {
-    this.subscription?.unsubscribe();
+    this.subscription?.unsubscribe(); // Automatically aborts the stream
     this.streaming.set(false);
   }
 }
@@ -172,13 +184,14 @@ Stream server logs in real-time:
 
 ```typescript
 const logContainer = document.getElementById('logs');
+const controller = new AbortController();
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/logs/stream',
+  signal: controller.signal,
   decodeToString: true,
   onData: (chunk) => {
-    // Split chunk into lines
     const lines = chunk.split('\n').filter(line => line.trim());
     
     lines.forEach(line => {
@@ -195,25 +208,28 @@ await client.fetchStream({
     console.log('Log stream ended');
   }
 });
+
+// Stop streaming logs
+// controller.abort();
 ```
 
-## File Download with Progress
+## File Download with Streaming
 
-Combine streaming with progress tracking:
+Download large files with manual progress tracking:
 
 ```typescript
+const controller = new AbortController();
 const chunks: Uint8Array[] = [];
 let totalBytesReceived = 0;
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/files/large-file.zip',
-  decodeToString: false,
+  signal: controller.signal,
   onData: (chunk) => {
     chunks.push(chunk);
     totalBytesReceived += chunk.length;
     
-    // Update progress bar
     const megabytes = (totalBytesReceived / (1024 * 1024)).toFixed(2);
     progressText.textContent = `Downloaded: ${megabytes} MB`;
   },
@@ -231,16 +247,18 @@ await client.fetchStream({
 });
 ```
 
-## JSON Line Streaming (JSONL)
+## JSON Lines Streaming (NDJSON)
 
-Process JSON objects one at a time:
+Process newline-delimited JSON objects one at a time:
 
 ```typescript
+const controller = new AbortController();
 let buffer = '';
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/data/jsonl',
+  signal: controller.signal,
   decodeToString: true,
   onData: (chunk) => {
     buffer += chunk;
@@ -261,7 +279,7 @@ await client.fetchStream({
     });
   },
   onComplete: () => {
-    // Process any remaining data
+    // Process any remaining data in the buffer
     if (buffer.trim()) {
       try {
         const data = JSON.parse(buffer);
@@ -276,72 +294,88 @@ await client.fetchStream({
 
 ## Cancellation
 
-Cancel streams at any time using the returned abort function:
-
-```typescript
-// Start streaming
-const abort = await client.fetchStream({
-  method: 'GET',
-  url: '/api/long-stream',
-  decodeToString: true,
-  onData: (chunk) => console.log(chunk)
-});
-
-// Cancel after 10 seconds
-setTimeout(() => {
-  abort();
-  console.log('Stream cancelled');
-}, 10000);
-```
-
-Or use `AbortController`:
+Use `AbortController` to cancel streams:
 
 ```typescript
 const controller = new AbortController();
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
-  url: '/api/stream',
+  url: '/api/long-stream',
   signal: controller.signal,
   decodeToString: true,
   onData: (chunk) => console.log(chunk),
   onError: (error) => {
-    if (error.name === 'AbortError') {
-      console.log('Stream was cancelled');
-    }
+    // AbortError is silently ignored by the library,
+    // so this won't fire when you call controller.abort()
+    console.error('Stream error:', error);
   }
 });
 
-// Cancel from anywhere
-controller.abort();
+// Cancel after 10 seconds
+setTimeout(() => controller.abort(), 10000);
+```
+
+In Angular, unsubscribing from the Observable automatically aborts the stream:
+
+```typescript
+const subscription = this.http.fetchStream({
+  method: 'GET',
+  url: '/api/stream',
+  decodeToString: true
+}).subscribe(chunk => console.log(chunk));
+
+// Cancel
+subscription.unsubscribe();
+
+// Or use takeUntilDestroyed() for automatic cleanup
+this.http.fetchStream({...})
+  .pipe(takeUntilDestroyed())
+  .subscribe(chunk => console.log(chunk));
 ```
 
 ## Request Options
 
-Full `fetchStream()` configuration:
+Full `HttpStreamRequest` configuration:
 
 ```typescript
-interface HttpStreamRequest {
-  method: string;                      // HTTP method
-  url: string;                         // Request URL
-  body?: any;                          // Request body
-  headers?: Record<string, string>;    // HTTP headers
-  decodeToString?: boolean;            // Decode chunks to string (default: false)
-  signal?: AbortSignal;                // Cancellation signal
-  onData: (chunk: string | Uint8Array) => void;     // Data callback
-  onError?: (error: Error) => void;    // Error callback
-  onComplete?: () => void;             // Completion callback
+// Binary streaming (default)
+interface HttpStreamRequestBinary {
+  method: string;                       // HTTP method
+  url: string;                          // Request URL
+  body?: any;                           // Request body
+  headers?: Record<string, string>;     // HTTP headers
+  interceptors?: HttpInterceptorFn[];   // Interceptor chain
+  signal?: AbortSignal;                 // Cancellation signal
+  decodeToString?: false;               // Binary mode (default)
+  onData?: (chunk: Uint8Array) => void; // Data callback
+  onError?: (error: Error) => void;     // Error callback
+  onComplete?: () => void;              // Completion callback
+}
+
+// Text streaming
+interface HttpStreamRequestString {
+  method: string;
+  url: string;
+  body?: any;
+  headers?: Record<string, string>;
+  interceptors?: HttpInterceptorFn[];
+  signal?: AbortSignal;
+  decodeToString: true;                 // Text mode
+  onData?: (chunk: string) => void;     // Data callback (string chunks)
+  onError?: (error: Error) => void;
+  onComplete?: () => void;
 }
 ```
 
 ## Platform Support
 
-Streaming works on all platforms with optimized implementations:
+Streaming works on all platforms:
 
 | Platform | Implementation |
 |----------|----------------|
 | **Browser** | ReadableStream API |
-| **Node.js** | Native streams with ReadableStream |
+| **Node.js** | Native ReadableStream (Node.js 18+) |
 | **Bun** | Optimized ReadableStream |
 | **Deno** | Native ReadableStream |
 
@@ -355,7 +389,7 @@ Don't overwhelm the UI with too many updates:
 let updateScheduled = false;
 let accumulatedData = '';
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/stream',
   decodeToString: true,
@@ -381,21 +415,18 @@ For binary streams, limit memory usage:
 const MAX_CHUNKS = 100;
 const chunks: Uint8Array[] = [];
 
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/large-file',
-  decodeToString: false,
   onData: (chunk) => {
     chunks.push(chunk);
     
-    // Save to disk or process when buffer is full
     if (chunks.length >= MAX_CHUNKS) {
       saveToDisk(chunks);
-      chunks.length = 0; // Clear array
+      chunks.length = 0;
     }
   },
   onComplete: () => {
-    // Save remaining chunks
     if (chunks.length > 0) {
       saveToDisk(chunks);
     }
@@ -408,7 +439,7 @@ await client.fetchStream({
 Always handle errors gracefully:
 
 ```typescript
-await client.fetchStream({
+client.fetchStream({
   method: 'GET',
   url: '/api/stream',
   decodeToString: true,
@@ -434,4 +465,4 @@ await client.fetchStream({
 
 - Learn about [Server-Sent Events](/features/sse) for event-based streaming
 - Explore [Progress Tracking](/features/progress) for upload/download monitoring
-- Check out the [API Reference](/api/http-stream-request) for all options
+- Check out the [API Reference](/api) for all options

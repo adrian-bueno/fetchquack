@@ -82,18 +82,24 @@ import { HttpClient } from 'fetchquack';
 const client = new HttpClient();
 
 // Stream AI responses chunk by chunk
+const controller = new AbortController();
 let response = '';
 
-await client.fetchStream({
+client.fetchStream({
   method: 'POST',
   url: '/api/ai/chat',
   body: { prompt: 'Explain HTTP streaming' },
   decodeToString: true,
+  signal: controller.signal,
   onData: (chunk) => {
     response += chunk;
     updateUI(response); // Real-time updates
-  }
+  },
+  onComplete: () => console.log('Done')
 });
+
+// Cancel at any time
+// controller.abort();
 ```
 
 </TabItem>
@@ -105,15 +111,21 @@ import { HttpClient } from 'fetchquack';
 const client = new HttpClient();
 
 // SSE with auto-reconnect
-await client.sse({
+const controller = new AbortController();
+
+client.sse({
   method: 'GET',
   url: '/api/events',
   autoReconnect: true,
   parseJson: true,
+  signal: controller.signal,
   onEvent: (event) => {
     console.log(event.data);
   }
 });
+
+// Close the connection
+// controller.abort();
 ```
 
 </TabItem>
