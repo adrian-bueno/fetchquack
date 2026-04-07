@@ -1,6 +1,6 @@
 {
   "name": "fetchquack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight HTTP client with support for streaming, SSE, progress monitoring and interceptors. Works in the browser, Node.js, Bun and Deno. Includes an Angular wrapper.",
   "license": "MIT",
   "author": "Adrián Bueno Jiménez (devadri.com)",
