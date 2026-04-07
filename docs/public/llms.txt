@@ -1,0 +1,46 @@
+# fetchquack
+
+> fetchquack is a lightweight, universal HTTP client built on the standard Fetch API. It provides first-class support for streaming responses, Server-Sent Events (SSE) with auto-reconnect, upload/download progress tracking, and an interceptor middleware system. It works on Browser, Node.js 18+, Bun 1.0+, Deno 1.11+, and has an Angular 17+ wrapper with RxJS Observable support. Zero runtime dependencies, ~4KB minified+gzipped.
+
+Key things to know:
+
+- `fetch()` returns `Promise<T>` for standard HTTP requests
+- `fetchStream()` and `sse()` return `void` and deliver data through callbacks (`onData`, `onEvent`, `onError`, `onComplete`). Use `AbortController` for cancellation — they do NOT return an abort function
+- `HttpError` has `statusCode`, `message`, and `error?` properties only (no `statusText` or `response`)
+- `HttpJsonParseError` extends `HttpError` (not `Error` directly)
+- All `SseEvent` fields (`id`, `event`, `data`, `retry`) are optional
+- All `RetryPolicyConfig` fields are optional. Defaults: maxRetries=0 (unlimited), initialInterval=3000, maxInterval=30000, backoffMultiplier=2, jitter=1000
+- The Angular wrapper (`fetchquack/ngx`) returns Observables for `fetchStream()` and `sse()`, and supports both Promise and Observable modes for `fetch()`
+- Built-in interceptors are imported from subpaths: `fetchquack/interceptors/auth`, `fetchquack/interceptors/logging`, `fetchquack/interceptors/header`, `fetchquack/interceptors/csrf`
+
+## Getting Started
+
+- [Introduction](https://adrian-bueno.github.io/fetchquack/getting-started/introduction): Overview of what fetchquack is, why it exists, and key features
+- [Installation](https://adrian-bueno.github.io/fetchquack/getting-started/installation): npm/yarn/pnpm/bun install commands and per-platform requirements
+- [Quick Start](https://adrian-bueno.github.io/fetchquack/getting-started/quick-start): Hands-on examples covering basic requests, streaming, SSE, progress, errors, cancellation, and interceptors
+
+## Core Concepts
+
+- [HTTP Client](https://adrian-bueno.github.io/fetchquack/core/http-client): HttpClient class, configuration options, method signatures, multiple clients, TypeScript generics, platform compatibility
+- [Requests & Responses](https://adrian-bueno.github.io/fetchquack/core/requests-responses): HTTP methods, request body types (JSON, text, FormData, binary), response handling (JSON, text, binary), HttpRequest interface, cancellation, error classes (HttpError, HttpJsonParseError)
+- [Interceptors](https://adrian-bueno.github.io/fetchquack/core/interceptors): Middleware system, built-in interceptors (auth, logging, header, CSRF) with all options, custom interceptor examples, HttpInterceptorContext interface, global vs request-level interceptors, execution order
+
+## Features
+
+- [Streaming](https://adrian-bueno.github.io/fetchquack/features/streaming): fetchStream() for text and binary streaming, AI chat streaming, log streaming, file download, NDJSON, cancellation via AbortController, Angular Observable integration
+- [Server-Sent Events](https://adrian-bueno.github.io/fetchquack/features/sse): sse() for SSE connections, JSON parsing, auto-reconnect with retry policy, custom event types, POST method SSE, Last-Event-ID tracking, Angular Observable integration
+- [Progress Tracking](https://adrian-bueno.github.io/fetchquack/features/progress): Upload and download progress via onUploadProgress/onDownloadProgress callbacks, HttpProgressEvent interface, platform-specific implementations
+- [Retry Policies](https://adrian-bueno.github.io/fetchquack/features/retry): RetryPolicyConfig for SSE auto-reconnect, exponential backoff formula, unlimited/fast/constant retry presets, custom retry interceptor for regular requests
+
+## Integrations
+
+- [Angular](https://adrian-bueno.github.io/fetchquack/integrations/angular): NgxHttpClient service, provideNgxHttpClient setup, Promise and Observable modes, RxJS streaming/SSE, dependency injection in interceptors, progress tracking, service pattern, testing
+
+## API Reference
+
+- [API Reference](https://adrian-bueno.github.io/fetchquack/api): Complete reference for all classes, interfaces, types, and functions including HttpClient, NgxHttpClient, HttpRequest, HttpStreamRequest, HttpSseRequest, HttpProgressEvent, SseEvent, RetryPolicyConfig, HttpInterceptorFn, HttpError, HttpJsonParseError, and all built-in interceptors
+
+## Optional
+
+- [GitHub Repository](https://github.com/adrian-bueno/fetchquack): Source code, issues, and contributions
+- [npm Package](https://www.npmjs.com/package/fetchquack): Package page on npm registry
