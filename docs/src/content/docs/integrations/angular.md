@@ -105,11 +105,13 @@ export class UserComponent {
 Add `returnObservable: true` to get an Observable instead of a Promise. The Observable automatically aborts the request when unsubscribed:
 
 ```typescript
+import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({...})
 export class UserComponent {
   private http = inject(NgxHttpClient);
+  private destroyRef = inject(DestroyRef);
   user = signal<User | null>(null);
   
   loadUser(id: number) {
@@ -118,7 +120,7 @@ export class UserComponent {
       url: `/api/users/${id}`,
       returnObservable: true  // Returns Observable<User>
     }).pipe(
-      takeUntilDestroyed()  // Auto-cleanup and abort on destroy
+      takeUntilDestroyed(this.destroyRef)  // Auto-cleanup and abort on destroy
     ).subscribe({
       next: (user) => this.user.set(user),
       error: (err) => console.error(err)
@@ -138,6 +140,7 @@ export class UserComponent {
 })
 export class AiChatComponent {
   private http = inject(NgxHttpClient);
+  private destroyRef = inject(DestroyRef);
   response = signal('');
   
   streamAiResponse(prompt: string) {
@@ -149,7 +152,7 @@ export class AiChatComponent {
       body: { prompt },
       decodeToString: true
     }).pipe(
-      takeUntilDestroyed()
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (chunk) => {
         this.response.update(text => text + chunk);
@@ -176,6 +179,7 @@ export class AiChatComponent {
 })
 export class NotificationsComponent {
   private http = inject(NgxHttpClient);
+  private destroyRef = inject(DestroyRef);
   notifications = signal<Notification[]>([]);
   
   ngOnInit() {
@@ -185,7 +189,7 @@ export class NotificationsComponent {
       parseJson: true,
       autoReconnect: true
     }).pipe(
-      takeUntilDestroyed()  // Auto-disconnect when component is destroyed
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (event) => {
         if (event.data) {
@@ -379,6 +383,7 @@ import { HttpError } from 'fetchquack';
 @Component({...})
 export class DataComponent {
   private http = inject(NgxHttpClient);
+  private destroyRef = inject(DestroyRef);
   
   loadData() {
     this.http.fetch<Data>({
@@ -394,7 +399,7 @@ export class DataComponent {
         }
         return throwError(() => error);
       }),
-      takeUntilDestroyed()
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe(data => this.processData(data));
   }
 }
@@ -464,17 +469,23 @@ describe('UserService', () => {
 
 ### Use takeUntilDestroyed()
 
-Always use `takeUntilDestroyed()` with Observables to avoid memory leaks:
+Always use `takeUntilDestroyed()` with Observables to avoid memory leaks.
+
+When calling `takeUntilDestroyed()` outside a constructor or field initializer, you must inject `DestroyRef` and pass it explicitly:
 
 ```typescript
-// Good - automatic cleanup
-this.http.sse({...})
-  .pipe(takeUntilDestroyed())
-  .subscribe(...);
+// In constructor or field initializer — no argument needed
+private data$ = this.http.sse({...})
+  .pipe(takeUntilDestroyed());
 
-// Bad - manual cleanup needed, easy to forget
-this.http.sse({...})
-  .subscribe(...);
+// In methods like ngOnInit, loadData, etc. — pass DestroyRef
+private destroyRef = inject(DestroyRef);
+
+ngOnInit() {
+  this.http.sse({...})
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(...);
+}
 ```
 
 ### Prefer Promises for Simple Cases
@@ -490,8 +501,12 @@ async loadData() {
 
 // Overkill for a simple one-off request
 loadData() {
-  this.http.fetch<Data>({...returnObservable: true})
-    .pipe(takeUntilDestroyed())
+  this.http.fetch<Data>({
+    method: 'GET',
+    url: '/api/data',
+    returnObservable: true
+  })
+    .pipe(takeUntilDestroyed(this.destroyRef))
     .subscribe(data => this.data.set(data));
 }
 ```

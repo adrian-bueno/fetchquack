@@ -84,7 +84,7 @@ const html = await client.fetch({
 const imageData = await client.fetch({
   method: 'GET',
   url: '/api/image.png',
-  decodeToString: false
+  decodeToString: false  // Returns Uint8Array instead of parsing as JSON/text
 });
 // imageData is a Uint8Array
 ```

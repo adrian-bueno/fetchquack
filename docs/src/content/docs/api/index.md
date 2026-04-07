@@ -266,7 +266,7 @@ JSON parsing error. Extends `HttpError`.
 
 ```typescript
 class HttpJsonParseError extends HttpError {
-  readonly responseText: string;  // Raw response text (truncated to 500 chars)
+  readonly responseText: string;  // Raw response text (truncated to ~500 chars)
   readonly name: string;          // Always 'HttpJsonParseError'
   // statusCode is always 0
 }

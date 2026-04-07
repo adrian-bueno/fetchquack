@@ -329,8 +329,9 @@ const subscription = this.http.fetchStream({
 subscription.unsubscribe();
 
 // Or use takeUntilDestroyed() for automatic cleanup
+// (pass DestroyRef when calling outside constructor/field initializer)
 this.http.fetchStream({...})
-  .pipe(takeUntilDestroyed())
+  .pipe(takeUntilDestroyed(this.destroyRef))
   .subscribe(chunk => console.log(chunk));
 ```
 

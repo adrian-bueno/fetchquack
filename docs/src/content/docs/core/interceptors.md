@@ -285,7 +285,7 @@ const errorHandlerInterceptor: HttpInterceptorFn = async (context, next) => {
 Implement simple response caching:
 
 ```typescript
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { response: HttpInterceptorResponse; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const cacheInterceptor: HttpInterceptorFn = async (context, next) => {
@@ -299,11 +299,11 @@ const cacheInterceptor: HttpInterceptorFn = async (context, next) => {
   
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     console.log('Cache hit for', cacheKey);
-    return cached.data;
+    return cached.response;
   }
   
   const response = await next(context);
-  cache.set(cacheKey, { data: response, timestamp: Date.now() });
+  cache.set(cacheKey, { response, timestamp: Date.now() });
   
   return response;
 };

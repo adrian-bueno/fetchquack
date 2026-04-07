@@ -260,7 +260,7 @@ try {
 } catch (error) {
   if (error instanceof HttpJsonParseError) {
     console.log('Invalid JSON response');
-    console.log('Raw text:', error.responseText); // Truncated to 500 chars
+    console.log('Raw text:', error.responseText); // Truncated to ~500 chars
   }
 }
 ```
@@ -275,7 +275,7 @@ class HttpError extends Error {
 }
 
 class HttpJsonParseError extends HttpError {
-  readonly responseText: string; // Raw response text (max 500 chars)
+  readonly responseText: string; // Raw response text (truncated to ~500 chars)
   // statusCode is always 0
 }
 ```

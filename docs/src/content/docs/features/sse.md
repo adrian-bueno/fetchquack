@@ -167,7 +167,7 @@ client.sse({
 In Angular, `sse()` returns an `Observable<SseEvent<T>>`. Unsubscribing automatically closes the connection:
 
 ```typescript
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { NgxHttpClient } from 'fetchquack/ngx';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -181,6 +181,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 })
 export class NotificationsComponent {
   private http = inject(NgxHttpClient);
+  private destroyRef = inject(DestroyRef);
   notifications = signal<Notification[]>([]);
   
   ngOnInit() {
@@ -190,7 +191,7 @@ export class NotificationsComponent {
       parseJson: true,
       autoReconnect: true
     }).pipe(
-      takeUntilDestroyed()  // Auto-close when component is destroyed
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (event) => {
         if (event.data) {
@@ -314,8 +315,9 @@ client.sse({ ..., signal: controller.signal });
 window.addEventListener('beforeunload', () => controller.abort());
 
 // Angular - use takeUntilDestroyed() for automatic cleanup
+// (pass DestroyRef when calling outside constructor/field initializer)
 this.http.sse({...})
-  .pipe(takeUntilDestroyed())
+  .pipe(takeUntilDestroyed(this.destroyRef))
   .subscribe(...);
 ```
 

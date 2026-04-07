@@ -37,7 +37,7 @@ function getTokenFromCookie(cookieName: string): string | null {
 /**
  * Configuration for CSRF protection interceptor.
  */
-export interface CsrfInterceptorConfig {
+export interface CsrfInterceptorOptions {
   /** Cookie name containing CSRF token. @default 'XSRF-TOKEN' */
   cookieName?: string;
 
@@ -47,6 +47,11 @@ export interface CsrfInterceptorConfig {
   /** Methods requiring CSRF protection. @default ['POST', 'PUT', 'PATCH', 'DELETE'] */
   protectedMethods?: string[];
 }
+
+/**
+ * @deprecated Use {@link CsrfInterceptorOptions} instead.
+ */
+export type CsrfInterceptorConfig = CsrfInterceptorOptions;
 
 /**
  * Creates a CSRF protection interceptor for browser environments.
@@ -59,7 +64,7 @@ export interface CsrfInterceptorConfig {
  *
  * **Note:** Only works in browser environments where `document.cookie` is available.
  *
- * @param config - Optional configuration for cookie/header names
+ * @param options - Optional configuration for cookie/header names
  * @returns Configured interceptor function
  *
  * @example
@@ -79,10 +84,10 @@ export interface CsrfInterceptorConfig {
  * });
  * ```
  */
-export function csrfInterceptor(config?: CsrfInterceptorConfig): HttpInterceptorFn {
-  const cookieName = config?.cookieName ?? 'XSRF-TOKEN';
-  const headerName = config?.headerName ?? 'X-XSRF-TOKEN';
-  const protectedMethods = config?.protectedMethods ?? ['POST', 'PUT', 'PATCH', 'DELETE'];
+export function csrfInterceptor(options?: CsrfInterceptorOptions): HttpInterceptorFn {
+  const cookieName = options?.cookieName ?? 'XSRF-TOKEN';
+  const headerName = options?.headerName ?? 'X-XSRF-TOKEN';
+  const protectedMethods = options?.protectedMethods ?? ['POST', 'PUT', 'PATCH', 'DELETE'];
 
   return async (ctx: HttpInterceptorContext, next: HttpInterceptorNext): Promise<HttpInterceptorResponse> => {
     // Only add CSRF token for state-changing methods

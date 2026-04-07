@@ -26,7 +26,7 @@ Unlike traditional HTTP clients, FetchQuack treats streaming as a first-class ci
 - Stream text and binary responses
 - Server-Sent Events (SSE) with auto-reconnect
 - Progress tracking for uploads and downloads
-- Backpressure handling
+- Cancellation via AbortController
 
 ### Zero Dependencies
 FetchQuack has **zero runtime dependencies**. The core library is just ~4KB minified and gzipped, making it perfect for bundle-size-conscious applications.
