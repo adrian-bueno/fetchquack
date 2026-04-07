@@ -2,9 +2,9 @@
 
 Documentation website for [FetchQuack](https://github.com/adrian-bueno/fetchquack), built with [Astro Starlight](https://starlight.astro.build/).
 
-## 🚀 Commands
+## Commands
 
-From the docs directory:
+From the `docs/` directory:
 
 | Command | Action |
 |---------|--------|
@@ -13,15 +13,7 @@ From the docs directory:
 | `npm run build` | Build production site to `./dist/` |
 | `npm run preview` | Preview build locally |
 
-Or from the root directory:
-
-| Command | Action |
-|---------|--------|
-| `npm run docs:dev` | Start docs dev server |
-| `npm run docs:build` | Build docs for production |
-| `npm run docs:preview` | Preview docs build |
-
-## 📁 Structure
+## Structure
 
 ```
 docs/
@@ -34,6 +26,6 @@ docs/
 └── astro.config.mjs         # Configuration
 ```
 
-## 🌐 Deployment
+## Deployment
 
 Configured for GitHub Pages at `https://adrian-bueno.github.io/fetchquack/`
