@@ -3,7 +3,7 @@ title: Retry Policies
 description: Configure automatic retry behavior for SSE connections
 ---
 
-FetchQuack provides configurable retry policies with exponential backoff for SSE auto-reconnect. You can also implement custom retry logic for regular requests using interceptors.
+fetchquack provides configurable retry policies with exponential backoff for SSE auto-reconnect. You can also implement custom retry logic for regular requests using interceptors.
 
 ## Retry Policy Configuration
 
@@ -163,7 +163,7 @@ event: message
 data: some data
 ```
 
-FetchQuack respects the server's suggestion. The suggested interval replaces the current interval but is still capped by `maxInterval`.
+fetchquack respects the server's suggestion. The suggested interval replaces the current interval but is still capped by `maxInterval`.
 
 ## Custom Retry Logic for Regular Requests
 

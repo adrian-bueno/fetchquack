@@ -1,9 +1,9 @@
 ---
 title: API Reference
-description: Complete API reference for FetchQuack
+description: Complete API reference for fetchquack
 ---
 
-Complete reference documentation for all FetchQuack APIs.
+Complete reference documentation for all fetchquack APIs.
 
 ## Core Classes
 

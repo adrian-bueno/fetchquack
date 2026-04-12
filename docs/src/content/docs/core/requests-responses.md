@@ -1,6 +1,6 @@
 ---
 title: Requests & Responses
-description: Understanding HTTP requests and responses in FetchQuack
+description: Understanding HTTP requests and responses in fetchquack
 ---
 
 Learn how to make different types of HTTP requests and handle their responses.
@@ -9,7 +9,7 @@ Learn how to make different types of HTTP requests and handle their responses.
 
 ### HTTP Methods
 
-FetchQuack supports all standard HTTP methods:
+fetchquack supports all standard HTTP methods:
 
 ```typescript
 // GET request
@@ -349,7 +349,7 @@ async function deleteUser(id: number): Promise<void> {
 
 ### Automatic Content-Type
 
-FetchQuack automatically sets `Content-Type` when not provided:
+fetchquack automatically sets `Content-Type` when not provided:
 
 - **Object body** → `application/json` (body is JSON-stringified)
 - **String body** → `text/plain`

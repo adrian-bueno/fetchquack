@@ -1,9 +1,9 @@
 ---
 title: Quick Start
-description: Get up and running with FetchQuack in minutes
+description: Get up and running with fetchquack in minutes
 ---
 
-Learn the basics of FetchQuack in just a few minutes.
+Learn the basics of fetchquack in just a few minutes.
 
 ## Basic Usage
 
@@ -163,7 +163,7 @@ const response = await client.fetch({
 
 ## Error Handling
 
-FetchQuack provides detailed error information:
+fetchquack provides detailed error information:
 
 ```typescript
 import { HttpError, HttpJsonParseError } from 'fetchquack';

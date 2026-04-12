@@ -38,7 +38,7 @@ const customHeaderInterceptor: HttpInterceptorFn = async (context, next) => {
 
 ## Built-in Interceptors
 
-FetchQuack includes several ready-to-use interceptors.
+fetchquack includes several ready-to-use interceptors.
 
 ### Authentication Interceptor
 

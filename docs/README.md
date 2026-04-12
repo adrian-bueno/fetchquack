@@ -1,6 +1,6 @@
-# FetchQuack Documentation
+# fetchquack Documentation
 
-Documentation website for [FetchQuack](https://github.com/adrian-bueno/fetchquack), built with [Astro Starlight](https://starlight.astro.build/).
+Documentation website for [fetchquack](https://github.com/adrian-bueno/fetchquack), built with [Astro Starlight](https://starlight.astro.build/).
 
 ## Commands
 

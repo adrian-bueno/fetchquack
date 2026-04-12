@@ -3,7 +3,7 @@ title: Angular Integration
 description: RxJS integration with dependency injection support for Angular 17+
 ---
 
-FetchQuack provides seamless Angular integration with RxJS Observable support and full dependency injection context for interceptors.
+fetchquack provides seamless Angular integration with RxJS Observable support and full dependency injection context for interceptors.
 
 ## Installation
 
@@ -11,7 +11,7 @@ FetchQuack provides seamless Angular integration with RxJS Observable support an
 npm install fetchquack
 ```
 
-FetchQuack requires:
+fetchquack requires:
 - Angular 17.0.0 or higher
 - RxJS 7.0.0 or higher
 
@@ -19,7 +19,7 @@ These are peer dependencies and should already be in your Angular project.
 
 ## Setup
 
-Configure FetchQuack in your `app.config.ts`:
+Configure fetchquack in your `app.config.ts`:
 
 ```typescript
 import { ApplicationConfig } from '@angular/core';

@@ -3,7 +3,7 @@ title: Progress Tracking
 description: Monitor upload and download progress on all platforms
 ---
 
-FetchQuack provides upload and download progress tracking that works on all platforms with platform-optimized implementations.
+fetchquack provides upload and download progress tracking that works on all platforms with platform-optimized implementations.
 
 ## Upload Progress
 

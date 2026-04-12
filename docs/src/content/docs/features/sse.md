@@ -3,7 +3,7 @@ title: Server-Sent Events (SSE)
 description: Full SSE implementation with auto-reconnect and event parsing
 ---
 
-FetchQuack provides a complete implementation of the [SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with automatic event parsing, reconnection, and support for all HTTP methods (unlike the browser's native `EventSource` which only supports GET).
+fetchquack provides a complete implementation of the [SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with automatic event parsing, reconnection, and support for all HTTP methods (unlike the browser's native `EventSource` which only supports GET).
 
 ## How It Works
 
@@ -133,7 +133,7 @@ client.sse({
 
 ## POST Method SSE (AI Streaming)
 
-Unlike the browser's `EventSource`, FetchQuack supports any HTTP method. This is useful for AI APIs that require POST requests:
+Unlike the browser's `EventSource`, fetchquack supports any HTTP method. This is useful for AI APIs that require POST requests:
 
 ```typescript
 const controller = new AbortController();

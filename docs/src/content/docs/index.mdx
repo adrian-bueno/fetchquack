@@ -141,8 +141,8 @@ await client.fetch({
   method: 'POST',
   url: '/api/upload',
   body: file,
-  onUploadProgress: (p) => {
-    progressBar.style.width = `${p.percentage}%`;
+  onUploadProgress: (progress) => {
+    progressBar.style.width = `${progress.percentage}%`;
   }
 });
 
@@ -150,8 +150,8 @@ await client.fetch({
 await client.fetch({
   method: 'GET',
   url: '/api/download',
-  onDownloadProgress: (p) => {
-    progressBar.style.width = `${p.percentage}%`;
+  onDownloadProgress: (progress) => {
+    progressBar.style.width = `${progress.percentage}%`;
   }
 });
 ```
